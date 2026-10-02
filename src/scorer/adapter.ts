@@ -106,16 +106,39 @@ function matchCounterparty(
 }
 
 /**
- * A supplier on file that the caller names anywhere in what they said: its full
- * name, or its first word (4+ letters) as a whole word. More than one supplier
- * named means no match, never a guess. Gilles's organization extractor only
- * knows phrases like "calling from X", so this catches "Acme finance here".
+ * Words that make a supplier's name the OBJECT of the sentence ("your open
+ * invoices with Acme", "les factures de Delta") rather than who is calling.
+ */
+const REFERENTIAL = new Set([
+  'invoice', 'invoices', 'amount', 'amounts', 'payment', 'payments', 'account', 'accounts', 'record', 'records',
+  'list', 'status', 'supplier', 'suppliers', 'vendor', 'vendors', 'about', 'regarding', 'concerning',
+  'facture', 'factures', 'montant', 'montants', 'paiement', 'paiements', 'compte', 'comptes', 'fiche', 'fiches',
+  'liste', 'statut', 'fournisseur', 'fournisseurs', 'concernant'
+]);
+const REFERENTIAL_WINDOW = 5;
+
+/** True when `words[at]` starts a mention that the few words before it turn into a reference. */
+function isReference(words: readonly string[], at: number): boolean {
+  return words.slice(Math.max(0, at - REFERENTIAL_WINDOW), at).some((w) => REFERENTIAL.has(w));
+}
+
+/**
+ * A supplier on file that the caller presents as their own company: its full
+ * name, or its first word (4+ letters) as a whole word, in a place where it is
+ * not merely talked ABOUT. Asking for "the open invoices with Acme" names Acme
+ * without claiming to be Acme, and must not identify the caller. More than one
+ * supplier claimed means no match, never a guess.
  */
 function namedOnFile(transcript: string, counterparties: readonly Counterparty[]): Counterparty | null {
-  const text = ` ${normalize(transcript)} `;
+  const words = normalize(transcript).split(' ');
   const hits = counterparties.filter((c) => {
-    const token = firstToken(c.name);
-    return text.includes(` ${normalize(c.name)} `) || (token.length >= 4 && text.includes(` ${token} `));
+    const name = normalize(c.name).split(' ');
+    const token = name[0] ?? '';
+    return words.some((word, at) => {
+      const full = name.every((part, i) => words[at + i] === part);
+      const short = token.length >= 4 && word === token;
+      return (full || short) && !isReference(words, at);
+    });
   });
   return hits.length === 1 ? hits[0]! : null;
 }
