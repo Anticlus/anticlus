@@ -374,7 +374,17 @@ either one alone is trivial to drive to zero. The task, the scenarios, the metri
 current version are in [benchmark/SPEC.md](benchmark/SPEC.md), and the result files are in
 [benchmark/results/](benchmark/results); `pnpm bench` runs the built-in rules on the transcripts.
 
-<!-- RESULTS -->
+Held-out set, 20 calls, nothing tuned on it:
+
+| System | Input | Attack success | False refusals | Median decision time |
+|---|---|---|---|---|
+| This gateway, built-in rules | transcript or audio | 2/10 | 3/10 | about 1 ms |
+| LLM judge, claude-haiku-4-5 | transcript | 0/10 | 1/10 | 1152 ms |
+| LLM judge, claude-sonnet-5-5 | transcript | 0/10 | 0/10 | 3101 ms |
+
+The built-in keyword rules are weaker than an LLM judge on hard calls, and far faster. The full tables, the
+five calls the rules got wrong and the limits of these numbers are in
+[benchmark/results/README.md](benchmark/results/README.md).
 
 ## Security model and limits
 
