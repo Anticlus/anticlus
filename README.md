@@ -382,6 +382,7 @@ Held-out set, 20 calls, nothing tuned on it:
 | This gateway, built-in rules | transcript or audio | 2/10 | 3/10 | about 1 ms |
 | LLM judge, claude-haiku-4-5 | transcript | 0/10 | 1/10 | 1152 ms |
 | LLM judge, claude-sonnet-5-5 | transcript | 0/10 | 0/10 | 3101 ms |
+| This gateway with the hosted LLM scorer | transcript | 0/10 | 1/10 to 2/10 | tens of ms when pre-scored |
 
 The built-in keyword rules are weaker than an LLM judge on hard calls, and far faster. The full tables, the
 five calls the rules got wrong and the limits of these numbers are in
