@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "tsx src/cli.ts",
-    "example": "tsx examples/supplier-bank-change/run.ts"
+    "example": "tsx examples/supplier-bank-change/run.ts",
+    "bench": "tsx benchmark/run-baseline.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",
