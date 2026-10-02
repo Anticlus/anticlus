@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ACTION_POLICIES,
   scenarioSchema,
-  sentinelScoreResultSchema,
+  callScoreSchema,
   type Decision,
   type Scenario,
-  type SentinelScoreResult,
+  type CallScore,
   type TrustLevel
 } from '../src/contract.js';
 import { ATTACKER_IBANS, SEED_COUNTERPARTIES } from '../src/seed.js';
@@ -14,11 +14,11 @@ import { IDEAL_SCORES } from '../src/scenarios/ideal-scores.js';
 import { formatTable, runScenarios, summarize } from '../src/scenarios/runner.js';
 
 /**
- * A minimal reference of the BR-9 order the team chose, used ONLY to check that
+ * A minimal reference of the decision order, used ONLY to check that
  * the expectations in the scenarios agree with the ideal scores. The gateway
  * has its own engine and its own tests.
  */
-function reference(s: Scenario, score: SentinelScoreResult): Decision {
+function reference(s: Scenario, score: CallScore): Decision {
   const policy = DEFAULT_ACTION_POLICIES.find((p) => p.action === s.request.action)!;
   const matched = score.counterparty.matchedId;
   let trust: TrustLevel = 'anonymous';
@@ -100,7 +100,7 @@ describe('ideal scores', () => {
   it('has one valid score per scenario and none extra', () => {
     expect(Object.keys(IDEAL_SCORES).sort()).toEqual(SCENARIOS.map((s) => s.id).sort());
     for (const score of Object.values(IDEAL_SCORES))
-      expect(sentinelScoreResultSchema.safeParse(score).success).toBe(true);
+      expect(callScoreSchema.safeParse(score).success).toBe(true);
   });
 
   it('quotes the conversation verbatim, on the turn it names', () => {
@@ -130,7 +130,7 @@ describe('ideal scores', () => {
     }
   });
 
-  it('agrees with the expected decision under the BR-9 order', () => {
+  it('agrees with the expected decision under the decision order', () => {
     for (const s of SCENARIOS) expect(reference(s, IDEAL_SCORES[s.id]!), s.id).toBe(s.expect.decision);
   });
 

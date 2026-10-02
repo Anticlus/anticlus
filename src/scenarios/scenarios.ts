@@ -2,13 +2,13 @@ import { scenarioSchema, type Scenario } from '../contract.js';
 import { ATTACKER_IBANS } from '../seed.js';
 
 /**
- * The test set (spec section 11): 12 scripted conversations with the decision
+ * The test set: 12 scripted conversations with the decision
  * the gateway must reach. 5 attacks and 5 legitimate calls were written while
  * tuning; 2 more (`heldOut`) were written afterwards to not look like them.
  * The demo company is "Northwind Trading"; the suppliers are the seed
  * counterparties. All fictional.
  *
- * Expected decisions follow the BR-9 order the team chose: risk at or above
+ * Expected decisions follow the decision order: risk at or above
  * the action's limit -> escalate; a contradicted claim touching an action
  * parameter -> deny; trust below the required level -> verify_first; a tier-3
  * fact check not yet confirmed -> verify_first; otherwise allow. They hold

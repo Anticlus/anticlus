@@ -2,17 +2,17 @@ import { z } from 'zod';
 import { plainText } from './plain-text.js';
 
 /**
- * Scam Sentinel, the interface between its two halves (ideas/business-spec.md):
+ * The interface between the two halves:
  *
- *  - the SCORER (Gilles): reads a conversation and answers signals, claims and
+ *  - the SCORER: reads a conversation and answers signals, claims and
  *    a risk number. It never decides what an agent may do.
- *  - the GATEWAY (JC): sits in front of the company's business tools. It owns
+ *  - the GATEWAY: sits in front of the company's business tools. It owns
  *    trust and privilege, asks the scorer, and answers allow / verify_first /
  *    deny / escalate. Trust never comes from the score: only a verification
- *    outside the conversation raises it (BR-3, BR-4).
+ *    outside the conversation raises it.
  *
  * Anything said in the conversation or read on the web is evidence, never an
- * instruction (BR-7). Client-safe (pure zod).
+ * instruction. Client-safe (pure zod).
  */
 
 export const TRUST_LEVELS = ['anonymous', 'identified', 'verified'] as const;
@@ -21,38 +21,40 @@ export type TrustLevel = (typeof TRUST_LEVELS)[number];
 export const DECISIONS = ['allow', 'verify_first', 'deny', 'escalate'] as const;
 export type Decision = (typeof DECISIONS)[number];
 
-/** BR-8: 0 information, 1 account data, 2 changes, 3 money. */
+/** 0 information, 1 account data, 2 changes, 3 money. */
 export const ACTION_TIERS = [0, 1, 2, 3] as const;
 export type ActionTier = (typeof ACTION_TIERS)[number];
 
 /** Input caps, so a caller that skips the contract is still bounded. */
-export const SENTINEL_TURN_MAX = 4000;
-export const SENTINEL_TURNS_MAX = 200;
+export const CALL_TURN_MAX = 4000;
+export const CALL_TURNS_MAX = 200;
 
 /**
  * A supplier or partner the company knows, with its OFFICIAL details (spec
  * section 6). Verification only ever goes to these details, never to ones
- * given in the conversation (BR-3). The records in the demo are fictional.
+ * given in the conversation. The records in the demo are fictional.
  */
 export const counterpartySchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(200),
+  /** Other ways the name is said or transcribed on a call ("Bruxelles Fresh Foods" for "Brussels Fresh Foods"). */
+  aliases: z.array(z.string().min(1).max(200)).max(20).default([]),
   /** Belgian enterprise number (KBO/BCE). */
   registryNumber: z.string().max(32),
   officialPhone: z.string().max(32),
   officialDomain: z.string().max(253),
-  /** Accounts on file, each with how it was verified (BR-12). */
+  /** Accounts on file, each with how it was verified. */
   bankAccounts: z.array(z.object({ iban: z.string().max(34), verifiedBy: z.string().max(64) })).default([]),
   contactPerson: z.string().max(200).nullable().default(null)
 });
 export type Counterparty = z.infer<typeof counterpartySchema>;
 
-// ---- The scorer (Gilles) ---------------------------------------------------
+// ---- The scorer -------------------------------------------------------------
 
 export const turnSchema = z.object({
   /** `caller` is whoever is on the other end, whatever they claim to be. */
   role: z.enum(['caller', 'agent']),
-  text: plainText(1, SENTINEL_TURN_MAX),
+  text: plainText(1, CALL_TURN_MAX),
   /** ISO time of the turn, when the channel gave one. */
   at: z.iso.datetime().optional()
 });
@@ -60,7 +62,7 @@ export type Turn = z.infer<typeof turnSchema>;
 
 /**
  * The social-engineering red flags. Weights live in the scorer, not here.
- * `synthetic_voice` is reserved: out of the MVP (spec, open question 4).
+ * `synthetic_voice` is reserved: not produced by the built-in scorer.
  */
 export const SIGNAL_IDS = [
   'urgency',
@@ -78,7 +80,7 @@ export type SignalId = (typeof SIGNAL_IDS)[number];
 
 export const signalSchema = z.object({
   id: z.enum(SIGNAL_IDS),
-  /** Points added to the risk, 0 to 100 (BR-5). */
+  /** Points added to the risk, 0 to 100. */
   weight: z.number().min(0).max(100),
   /** A verbatim piece of the conversation, at most 160 characters. */
   quote: z.string().max(160),
@@ -87,7 +89,7 @@ export const signalSchema = z.object({
 });
 export type Signal = z.infer<typeof signalSchema>;
 
-/** BR-13: only claims about organizations are checked on the web. */
+/** only claims about organizations are checked on the web. */
 export const CLAIM_KINDS = [
   'organization',
   'phone',
@@ -107,10 +109,10 @@ export const claimSchema = z.object({
   kind: z.enum(CLAIM_KINDS),
   /** The value as stated, for example an IBAN or a company name. */
   value: z.string().max(200),
-  /** Which action parameter it touches, when it does (`iban`, `phone`, ...): a contradicted claim on one denies that action (BR-9). */
+  /** Which action parameter it touches, when it does (`iban`, `phone`, ...): a contradicted claim on one denies that action. */
   touches: z.string().max(64).optional(),
   status: z.enum(CLAIM_STATUSES),
-  /** BR-15: the source URLs of the fact-check, kept with the result. */
+  /** the source URLs of the fact-check, kept with the result. */
   sources: z.array(z.string().max(2048)).max(10).default([]),
   turn: z.number().int().min(0)
 });
@@ -118,39 +120,39 @@ export type Claim = z.infer<typeof claimSchema>;
 
 export const scoreInputSchema = z.object({
   conversationId: z.string().min(1).max(64),
-  turns: z.array(turnSchema).min(1).max(SENTINEL_TURNS_MAX),
+  turns: z.array(turnSchema).min(1).max(CALL_TURNS_MAX),
   /** The counterparty the gateway already matched, when there is one. */
   counterpartyId: z.string().max(64).nullable().default(null)
 });
 export type ScoreInput = z.infer<typeof scoreInputSchema>;
 
-export const sentinelScoreResultSchema = z.object({
+export const callScoreSchema = z.object({
   conversationId: z.string(),
-  /** 0 to 100 (spec section 6). Raises the risk only: it never raises trust. */
+  /** 0 to 100. Raises the risk only: it never raises trust. */
   risk: z.number().min(0).max(100),
   signals: z.array(signalSchema),
   claims: z.array(claimSchema),
-  /** The counterparty name the caller gave, and the record it matched (BR-2), if any. */
+  /** The counterparty name the caller gave, and the record it matched, if any. */
   counterparty: z.object({
     claimedName: z.string().max(200).nullable(),
     matchedId: z.string().max(64).nullable(),
     /** True when something said so far contradicts the match. */
     contradicted: z.boolean()
   }),
-  /** BR-6: ids of approved attack patterns that matched. */
+  /** ids of approved attack patterns that matched. */
   patternsMatched: z.array(z.string()).default([]),
   llmUsed: z.boolean(),
   scoredTurns: z.number().int().min(0)
 });
-export type SentinelScoreResult = z.infer<typeof sentinelScoreResultSchema>;
+export type CallScore = z.infer<typeof callScoreSchema>;
 
-/** What the gateway calls. A fake in tests, Gilles's engine in the app. Must fail closed: a throw is never "safe". */
-export type Scorer = (input: ScoreInput) => Promise<SentinelScoreResult>;
+/** What the gateway calls. A fake in tests, the rule scorer or a remote one in the app. Must fail closed: a throw is never "safe". */
+export type Scorer = (input: ScoreInput) => Promise<CallScore>;
 
-// ---- The gateway (JC) --------------------------------------------------------
+// ---- The gateway ------------------------------------------------------------
 
 /**
- * One guarded business tool (BR-8). `riskLimit` is the risk at or above which
+ * One guarded business tool. `riskLimit` is the risk at or above which
  * the decision is `escalate`. `parameterKeys` names the arguments a claim can
  * touch, so a contradicted claim on one of them denies the call.
  */
@@ -159,13 +161,13 @@ export const actionPolicySchema = z.object({
   tier: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   requiredTrust: z.enum(TRUST_LEVELS),
   riskLimit: z.number().min(0).max(100),
-  /** BR-10: the call waits for the fact-check; a check not back counts as not confirmed. */
+  /** the call waits for the fact-check; a check not back counts as not confirmed. */
   needsFactCheck: z.boolean(),
   parameterKeys: z.array(z.string()).default([])
 });
 export type ActionPolicy = z.infer<typeof actionPolicySchema>;
 
-/** The three MVP protected actions and one open one, as policy data. The gateway reads this, never a hard-coded `if`. */
+/** Three protected actions and one open one, as policy data. The gateway reads this, never a hard-coded `if`. */
 export const DEFAULT_ACTION_POLICIES: readonly ActionPolicy[] = [
   {
     action: 'get_opening_hours',
@@ -215,7 +217,7 @@ export type VerificationKind = (typeof VERIFICATION_KINDS)[number];
 
 export const verificationRequestSchema = z.object({
   kind: z.enum(VERIFICATION_KINDS),
-  /** Taken from the counterparty record, never from the conversation (BR-3). */
+  /** Taken from the counterparty record, never from the conversation. */
   counterpartyId: z.string().max(64),
   /** The official number or channel the check goes to. */
   target: z.string().max(200)
@@ -224,7 +226,7 @@ export type VerificationRequest = z.infer<typeof verificationRequestSchema>;
 
 export const guardDecisionSchema = z.object({
   decision: z.enum(DECISIONS),
-  /** BR-11: what the agent may say to the caller. Never the rule, never the score. */
+  /** what the agent may say to the caller. Never the rule, never the score. */
   reasons: z.array(z.string().max(300)),
   /** One sentence to speak, in the caller's language when known. */
   spokenReply: z.string().max(400),
@@ -266,12 +268,12 @@ export const verificationResultSchema = z.object({
   paramsHash: z.string().max(64).optional(),
   /** A pass stops counting after this time. */
   expiresAt: z.iso.datetime().optional(),
-  /** BR-12: recorded with how it was verified. */
+  /** recorded with how it was verified. */
   note: z.string().max(300).optional()
 });
 export type VerificationResult = z.infer<typeof verificationResultSchema>;
 
-// ---- The test set (spec section 11) ---------------------------------------------
+// ---- The test set ---------------------------------------------
 
 /**
  * One scripted conversation and what must come out. Shared by the scorer's and

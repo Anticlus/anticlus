@@ -1,5 +1,5 @@
 /**
- * Scenarios where Gilles's real scorer ends in a different SAFE decision than
+ * Scenarios where the rule scorer ends in a different SAFE decision than
  * the scenario file expects, or misses a signal. None lets an attack through.
  * The expectations were written for an ideal scorer; each entry needs a
  * decision from the team, not a patch. Shared by the adapter test and the

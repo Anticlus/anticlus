@@ -8,5 +8,5 @@ export {
   type GatewayOptions
 } from './gateway.js';
 export { canonicalJson, hashParams } from './hash.js';
-export { MemoryStore, type SentinelStore } from './store.js';
+export { MemoryStore, type GatewayStore } from './store.js';
 export { computeTrust, indexCounterparties, matchedCounterparty } from './trust.js';

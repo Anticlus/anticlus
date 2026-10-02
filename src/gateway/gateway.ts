@@ -3,14 +3,14 @@ import {
   DEFAULT_ACTION_POLICIES,
   guardDecisionSchema,
   guardRequestSchema,
-  sentinelScoreResultSchema,
+  callScoreSchema,
   turnSchema,
   verificationResultSchema,
   type ActionPolicy,
   type Counterparty,
   type GuardDecision,
   type GuardRequest,
-  type SentinelScoreResult,
+  type CallScore,
   type Scorer,
   type Turn,
   type VerificationKind,
@@ -18,7 +18,7 @@ import {
 } from '../contract.js';
 import { decide } from './decide.js';
 import { hashParams } from './hash.js';
-import type { GrantRecord, SentinelStore } from './store.js';
+import type { GrantRecord, GatewayStore } from './store.js';
 import { computeTrust, indexCounterparties, matchedCounterparty, verificationFailed } from './trust.js';
 
 export const GRANT_TTL_MS = 120_000;
@@ -33,15 +33,15 @@ export type ConsumeResult =
 
 export interface GatewayOptions {
   scorer: Scorer;
-  store: SentinelStore;
+  store: GatewayStore;
   counterparties: readonly Counterparty[];
   policies?: readonly ActionPolicy[];
   now?: () => Date;
-  /** Recorded in every audit row: the policy that was applied (spec section 9). */
+  /** Recorded in every audit row: the policy that was applied. */
   policyVersion?: string;
   scorerTimeoutMs?: number;
   grantTtlMs?: number;
-  /** Whether a fact-check for the conversation is still running (BR-10). */
+  /** Whether a fact-check for the conversation is still running. */
   isFactCheckPending?: (conversationId: string) => boolean;
   /**
    * When true, a PASSED verification counts only if it is bound to the action and
@@ -64,7 +64,7 @@ export interface Gateway {
 }
 
 /** What a scorer outage looks like to the gate: maximum risk, nothing matched, nothing trusted. */
-function failedScore(conversationId: string): SentinelScoreResult {
+function failedScore(conversationId: string): CallScore {
   return {
     conversationId,
     risk: 100,
@@ -77,7 +77,7 @@ function failedScore(conversationId: string): SentinelScoreResult {
   };
 }
 
-function emptyScore(conversationId: string): SentinelScoreResult {
+function emptyScore(conversationId: string): CallScore {
   return { ...failedScore(conversationId), risk: 0 };
 }
 
@@ -135,7 +135,7 @@ export function createGateway(options: GatewayOptions): Gateway {
     };
   }
 
-  async function score(conversationId: string): Promise<{ result: SentinelScoreResult; failed: boolean }> {
+  async function score(conversationId: string): Promise<{ result: CallScore; failed: boolean }> {
     const conversation = await store.ensureConversation(conversationId);
     if (conversation.turns.length === 0) return { result: emptyScore(conversationId), failed: false };
     try {
@@ -147,7 +147,7 @@ export function createGateway(options: GatewayOptions): Gateway {
         }),
         timeoutMs
       );
-      return { result: sentinelScoreResultSchema.parse(raw), failed: false };
+      return { result: callScoreSchema.parse(raw), failed: false };
     } catch {
       return { result: failedScore(conversationId), failed: true };
     }

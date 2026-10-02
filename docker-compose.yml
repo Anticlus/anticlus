@@ -1,0 +1,39 @@
+# The gateway on one node, with its SQLite file on a named volume.
+#
+# The four secrets are read from the environment (or from a .env file next to
+# this one, which Docker Compose loads by itself). Compose refuses to start
+# when one is missing:
+#
+#   export ANTICLUS_AGENT_KEY=$(openssl rand -hex 32)
+#   export ANTICLUS_TOOL_KEY=$(openssl rand -hex 32)
+#   export ANTICLUS_ADMIN_KEY=$(openssl rand -hex 32)
+#   export ANTICLUS_MFA_SECRET=$(openssl rand -hex 32)
+#   docker compose up -d --build
+services:
+  anticlus:
+    build: .
+    image: anticlus:dev
+    restart: unless-stopped
+    ports:
+      - "${ANTICLUS_PORT:-8787}:8787"
+    environment:
+      ANTICLUS_AGENT_KEY: ${ANTICLUS_AGENT_KEY:?set ANTICLUS_AGENT_KEY}
+      ANTICLUS_TOOL_KEY: ${ANTICLUS_TOOL_KEY:?set ANTICLUS_TOOL_KEY}
+      ANTICLUS_ADMIN_KEY: ${ANTICLUS_ADMIN_KEY:?set ANTICLUS_ADMIN_KEY}
+      ANTICLUS_MFA_SECRET: ${ANTICLUS_MFA_SECRET:?set ANTICLUS_MFA_SECRET}
+      # Where a verify_first challenge is posted. Empty: the challenge is only returned to the agent host.
+      ANTICLUS_MFA_WEBHOOK_URL: ${ANTICLUS_MFA_WEBHOOK_URL:-}
+      # Empty: the built-in rules. Set to use a remote scorer.
+      ANTICLUS_SCORER_URL: ${ANTICLUS_SCORER_URL:-}
+      ANTICLUS_SCORER_KEY: ${ANTICLUS_SCORER_KEY:-}
+      ANTICLUS_COUNTERPARTIES: /config/counterparties.json
+      ANTICLUS_POLICIES: /config/policies.json
+      ANTICLUS_DB: /data/anticlus.db
+    volumes:
+      # Replace these two with your own records and policies.
+      - ./examples/counterparties.json:/config/counterparties.json:ro
+      - ./examples/policies.json:/config/policies.json:ro
+      - anticlus-data:/data
+
+volumes:
+  anticlus-data:

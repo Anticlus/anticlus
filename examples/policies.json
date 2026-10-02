@@ -1,0 +1,34 @@
+[
+  {
+    "action": "get_opening_hours",
+    "tier": 0,
+    "requiredTrust": "anonymous",
+    "riskLimit": 100,
+    "needsFactCheck": false,
+    "parameterKeys": []
+  },
+  {
+    "action": "get_invoice_status",
+    "tier": 1,
+    "requiredTrust": "identified",
+    "riskLimit": 70,
+    "needsFactCheck": false,
+    "parameterKeys": ["invoice"]
+  },
+  {
+    "action": "update_contact_person",
+    "tier": 2,
+    "requiredTrust": "verified",
+    "riskLimit": 60,
+    "needsFactCheck": false,
+    "parameterKeys": ["phone", "email"]
+  },
+  {
+    "action": "update_supplier_iban",
+    "tier": 3,
+    "requiredTrust": "verified",
+    "riskLimit": 60,
+    "needsFactCheck": false,
+    "parameterKeys": ["iban"]
+  }
+]

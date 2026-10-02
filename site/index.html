@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anticlus: an authorization gateway for voice agents</title>
+<meta name="description" content="Anticlus sits between an AI voice agent and the actions it can take. Nothing said on a call can open a protected action. Open source under Apache-2.0.">
+<meta name="color-scheme" content="dark light">
+<meta property="og:title" content="Anticlus: an authorization gateway for voice agents">
+<meta property="og:description" content="Anticlus sits between an AI voice agent and the actions it can take. Nothing said on a call can open a protected action.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2311181c'/%3E%3Cpath d='M9 23 16 8l7 15' fill='none' stroke='%23d6a45c' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M7 18h18' stroke='%23d6a45c' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f2ea;
+    --bg-raised: #fbf9f4;
+    --ink: #1a1f23;
+    --muted: #51575b;
+    --line: #d9d3c4;
+    --accent: #86540f;
+    --accent-ink: #fdfaf3;
+    --allow: #1f6a41;
+    --deny: #a2372a;
+    --term-bg: #10161a;
+    --term-ink: #dfdbd0;
+    --term-muted: #8f9793;
+    --term-line: #263037;
+    --term-amber: #e0b068;
+    --term-green: #8fcf9d;
+    --term-red: #ec9282;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1316;
+      --bg-raised: #151c20;
+      --ink: #e8e4d9;
+      --muted: #a9aca4;
+      --line: #2a343a;
+      --accent: #d6a45c;
+      --accent-ink: #14110a;
+      --allow: #8fcf9d;
+      --deny: #ec9282;
+      --term-bg: #090d0f;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  p { margin: 0 0 1em; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+  code, .mono { font-family: var(--mono); font-size: 0.9em; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: 20px; top: 12px; background: var(--bg-raised); padding: 8px 12px; z-index: 10; }
+
+  /* Header */
+  .top { border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-family: var(--serif); font-size: 1.25rem; font-weight: 600; letter-spacing: 0.01em; }
+  .brand svg { width: 24px; height: 24px; color: var(--accent); }
+  .top nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-size: 0.9rem; }
+  .top nav a { color: var(--muted); text-decoration: none; }
+  .top nav a:hover { color: var(--ink); text-decoration: underline; }
+  @media (max-width: 719px) { .top nav { display: none; } }
+
+  /* Hero */
+  .hero { padding: 72px 0 64px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 20px; }
+  .hero h1 { font-size: clamp(2.1rem, 6.2vw, 3.9rem); max-width: 17ch; letter-spacing: -0.01em; }
+  .hero .lede { font-size: clamp(1.05rem, 2.2vw, 1.25rem); color: var(--muted); max-width: 60ch; margin: 24px 0 32px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-block; padding: 12px 20px; border-radius: 4px; border: 1px solid var(--accent); font-weight: 600; font-size: 0.98rem; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-secondary { color: var(--accent); background: transparent; }
+  .btn:hover { filter: brightness(1.08); }
+  .audience { margin: 36px 0 0; font-size: 0.92rem; color: var(--muted); max-width: 68ch; }
+
+  /* Sections */
+  section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+  .kicker { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  section h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: 14px; }
+  .intro { color: var(--muted); max-width: 62ch; margin-bottom: 36px; }
+  h3 { font-size: 1.15rem; margin-bottom: 8px; }
+
+  .three { display: grid; gap: 28px; grid-template-columns: repeat(3, 1fr); list-style: none; margin: 0; padding: 0; }
+  .three li { border-top: 2px solid var(--accent); padding-top: 16px; }
+  .three p { color: var(--muted); margin: 0; font-size: 0.98rem; }
+  @media (max-width: 799px) { .three { grid-template-columns: 1fr; gap: 24px; } }
+
+  /* Flow diagram */
+  .flow { margin: 0 0 44px; padding: 24px; background: var(--bg-raised); border: 1px solid var(--line); border-radius: 6px; }
+  .flow-grid { display: grid; grid-template-columns: 1fr auto 1fr auto 1.15fr auto 1fr; align-items: center; gap: 10px 8px; }
+  .node { border: 1px solid var(--line); border-radius: 4px; padding: 12px 10px; text-align: center; background: var(--bg); min-width: 0; }
+  .node strong { display: block; font-size: 0.98rem; line-height: 1.25; }
+  .node span { display: block; font-size: 0.78rem; color: var(--muted); line-height: 1.35; margin-top: 4px; }
+  .node.gate { border: 2px solid var(--accent); }
+  .node.gate strong { font-family: var(--serif); font-size: 1.1rem; }
+  .node.side { border-style: dashed; }
+  .arr { text-align: center; color: var(--muted); font-size: 0.72rem; line-height: 1.25; }
+  .arr i { display: block; font-style: normal; font-size: 1.25rem; color: var(--accent); line-height: 1; }
+  .arr .v { display: none; }
+  .n1 { grid-area: 1 / 1; } .a1 { grid-area: 1 / 2; }
+  .n2 { grid-area: 1 / 3; } .a2 { grid-area: 1 / 4; }
+  .n3 { grid-area: 1 / 5; } .a3 { grid-area: 1 / 6; }
+  .n4 { grid-area: 1 / 7; }
+  .a4 { grid-area: 2 / 5; }
+  .n5 { grid-area: 3 / 4 / 4 / 7; justify-self: center; width: min(100%, 300px); }
+  .flow figcaption { margin-top: 18px; font-size: 0.85rem; color: var(--muted); }
+  @media (max-width: 799px) {
+    .flow { padding: 16px; }
+    .flow-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.9fr); gap: 8px 6px; }
+    .arr .h { display: none; }
+    .arr .v { display: block; }
+    .n1 { grid-area: 1 / 1; } .a1 { grid-area: 2 / 1; }
+    .n2 { grid-area: 3 / 1; } .a2 { grid-area: 4 / 1; }
+    .n3 { grid-area: 5 / 1; } .a3 { grid-area: 6 / 1; }
+    .n4 { grid-area: 7 / 1; }
+    .a4 { grid-area: 5 / 2; }
+    .a4 .v { display: none; }
+    .a4 .h { display: block; }
+    .a4 small { display: none; }
+    .n5 { grid-area: 5 / 3; width: auto; justify-self: stretch; }
+  }
+  .arr small { display: block; font-size: inherit; }
+
+  .steps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 40px; list-style: none; margin: 0 0 44px; padding: 0; counter-reset: step; }
+  .steps li { counter-increment: step; padding-left: 52px; position: relative; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 34px; height: 34px; border: 1px solid var(--accent); color: var(--accent); border-radius: 50%; display: grid; place-items: center; font-family: var(--mono); font-size: 0.9rem; }
+  .steps p { color: var(--muted); margin: 0; font-size: 0.98rem; }
+  @media (max-width: 799px) { .steps { grid-template-columns: 1fr; } }
+
+  .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .card { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
+  .card ul { margin: 0; padding-left: 1.1em; color: var(--muted); font-size: 0.98rem; }
+  .card li { margin-bottom: 8px; }
+  .card li:last-child { margin-bottom: 0; }
+  @media (max-width: 799px) { .facts { grid-template-columns: 1fr; } }
+
+  /* Terminal */
+  .run { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  @media (max-width: 899px) { .run { grid-template-columns: minmax(0, 1fr); } }
+  .term { background: var(--term-bg); color: var(--term-ink); border: 1px solid var(--term-line); border-radius: 6px; overflow: hidden; }
+  .term-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--term-line); font-family: var(--mono); font-size: 0.72rem; color: var(--term-muted); }
+  .term-bar b { width: 9px; height: 9px; border-radius: 50%; background: var(--term-line); }
+  .term-bar span { margin-left: 8px; }
+  .term-body { padding: 14px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; }
+  .ln { display: grid; grid-template-columns: 8ch minmax(0, 1fr); gap: 0 1ch; padding: 3px 0; }
+  .ln .who { color: var(--term-muted); }
+  .ln .msg { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ln.gw .who, .ln.gw .msg { color: var(--term-amber); }
+  .ok { color: var(--term-green); }
+  .no { color: var(--term-red); }
+  .ref { color: var(--term-muted); font-size: 0.7rem; vertical-align: super; margin-left: 0.5ch; user-select: none; }
+  .notes { list-style: none; margin: 0; padding: 0; counter-reset: note; }
+  .notes li { counter-increment: note; position: relative; padding-left: 34px; margin-bottom: 16px; font-size: 0.95rem; color: var(--muted); }
+  .notes li::before { content: counter(note); position: absolute; left: 0; top: 2px; font-family: var(--mono); font-size: 0.75rem; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 3px; display: grid; place-items: center; color: var(--ink); }
+
+  /* Columns */
+  .cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  @media (max-width: 799px) { .cols { grid-template-columns: 1fr; } }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); margin-bottom: 14px; }
+  .card.accented { border-top: 2px solid var(--accent); }
+  .after { margin: 24px 0 0; color: var(--muted); max-width: 62ch; }
+
+  .prose { max-width: 64ch; }
+  .prose p { color: var(--muted); }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .name { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: start; }
+  .name svg { width: 96px; height: 96px; color: var(--accent); }
+  @media (max-width: 599px) { .name { grid-template-columns: 1fr; gap: 20px; } .name svg { width: 64px; height: 64px; } }
+
+  footer { padding: 40px 0 56px; font-size: 0.92rem; color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; }
+  footer p { margin: 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Anticlus home">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 25 16 6l8 19"/><path d="M5 18h22"/></svg>
+      Anticlus
+    </a>
+    <nav aria-label="Sections">
+      <ul>
+        <li><a href="#problem">Problem</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#run">A real run</a></li>
+        <li><a href="#open">Open source</a></li>
+        <li><a href="#benchmark">Benchmark</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">Authorization gateway for voice agents</p>
+      <h1>Nothing said on a call can open a protected action.</h1>
+      <p class="lede">Anticlus sits between your AI voice agent and the actions it can take: changing a supplier's bank account, releasing a payment, changing contact details.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://github.com/anticlus/anticlus">Read the quickstart</a>
+        <a class="btn btn-secondary" href="mailto:hello@anticlus.ai">Book a call</a>
+      </div>
+      <p class="audience">For companies deploying voice agents with real permissions (finance operations, banks, insurers, telecoms, BPO call centres) and for the developers building those agents.</p>
+    </div>
+  </div>
+
+  <section id="problem" aria-labelledby="problem-h">
+    <div class="wrap">
+      <p class="kicker">The problem</p>
+      <h2 id="problem-h">A voice agent with permissions can be talked into using them</h2>
+      <p class="intro">Voice agents now do more than answer questions. Some can change a supplier's bank account, release a payment or change contact details.</p>
+      <ul class="three">
+        <li>
+          <h3>Everything on a call comes from the caller</h3>
+          <p>The name, the reason and the new number or IBAN are all supplied by the person on the line. So is the voice.</p>
+        </li>
+        <li>
+          <h3>The agent that listens is the agent that acts</h3>
+          <p>If the agent holds the keys to a protected action, persuading the agent is enough to open it.</p>
+        </li>
+        <li>
+          <h3>Checking with details given on the call checks nothing</h3>
+          <p>A confirmation sent to a number or address the caller just provided goes back to the caller.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <p class="kicker">How it works</p>
+      <h2 id="how-h">The agent asks, the gateway decides, the tool checks the grant</h2>
+      <p class="intro">Anticlus stands between the voice agent and the protected tool. Verification goes through the MFA system your company already runs.</p>
+
+      <figure class="flow" aria-labelledby="flow-cap">
+        <div class="flow-grid">
+          <div class="node n1"><strong>Caller</strong><span>on the phone</span></div>
+          <div class="arr a1" aria-hidden="true"><i class="h">&rarr;</i><i class="v">&darr;</i><small>speaks</small></div>
+          <div class="node n2"><strong>Voice agent</strong><span>holds no keys</span></div>
+          <div class="arr a2" aria-hidden="true"><i class="h">&rarr;</i><i class="v">&darr;</i><small>asks first</small></div>
+          <div class="node gate n3"><strong>Anticlus</strong><span>allow, verify first, deny, or escalate</span></div>
+          <div class="arr a3" aria-hidden="true"><i class="h">&rarr;</i><i class="v">&darr;</i><small>single-use grant</small></div>
+          <div class="node n4"><strong>Protected tool</strong><span>refuses without a grant</span></div>
+          <div class="arr a4" aria-hidden="true"><i class="v">&varr;</i><i class="h">&harr;</i><small>signed challenge</small></div>
+          <div class="node side n5"><strong>Your existing MFA</strong><span>app push, one-time code, or callback to the number on file</span></div>
+        </div>
+        <figcaption id="flow-cap">The caller speaks to the voice agent. The agent asks Anticlus before each protected action. Anticlus sends a signed challenge to the company's existing MFA system when verification is needed, and issues a single-use grant to the protected tool on allow.</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li>
+          <h3>The agent asks before each protected action</h3>
+          <p>Before it changes a bank account, releases a payment or changes contact details, the agent asks the gateway.</p>
+        </li>
+        <li>
+          <h3>The gateway scores the call and checks the caller</h3>
+          <p>It scores the call for social-engineering signals and checks the caller against what is on file. It answers allow, verify first, deny, or escalate to a human.</p>
+        </li>
+        <li>
+          <h3>Verification goes to your existing MFA</h3>
+          <p>On "verify first" it sends a signed challenge to your existing MFA system: a banking-app push, a one-time code, or a callback to the number on file. It never uses contact details given during the call.</p>
+        </li>
+        <li>
+          <h3>A single-use grant, bound to the exact action</h3>
+          <p>On allow it issues a single-use grant bound to that exact action and its exact parameters. The protected tool refuses to run without it. A verification for one bank account never opens another.</p>
+        </li>
+      </ol>
+
+      <div class="facts">
+        <div class="card">
+          <h3>What stays out of reach</h3>
+          <ul>
+            <li>The agent never holds the keys. It cannot record a verification or consume a grant.</li>
+            <li>The caller never hears a score or a rule.</li>
+            <li>Every decision lands in an audit trail that holds no transcript and no parameter values, only a hash.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>How you integrate it</h3>
+          <ul>
+            <li>An HTTP API.</li>
+            <li>A Python client.</li>
+            <li>An MCP proxy mode that puts the gateway in front of an existing MCP server without changing it.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="run" aria-labelledby="run-h">
+    <div class="wrap">
+      <p class="kicker">A real run</p>
+      <h2 id="run-h">One call, from request to refused replay</h2>
+      <p class="intro">An excerpt of a run. The caller asks to change a supplier's bank account.</p>
+      <div class="run">
+        <div class="term" role="group" aria-label="Excerpt of a run">
+          <div class="term-bar" aria-hidden="true"><b></b><b></b><b></b><span>run excerpt</span></div>
+          <div class="term-body">
+            <div class="ln"><span class="who">caller</span><span class="msg">Hello, Sophie Maes from Acme Industrial. We are moving to a new bank.</span></div>
+            <div class="ln gw"><span class="who">gateway</span><span class="msg">decision: verify_first<span class="ref" aria-hidden="true">[1]</span></span></div>
+            <div class="ln"><span class="who">agent</span><span class="msg">Before I can do that, I'll confirm it with Acme Industrial NV using the contact details we already have on file.<span class="ref" aria-hidden="true">[2]</span></span></div>
+            <div class="ln"><span class="who">tool</span><span class="msg">update_supplier_iban -&gt; <span class="no">REFUSED (no grant)</span><span class="ref" aria-hidden="true">[3]</span></span></div>
+            <div class="ln"><span class="who">mfa</span><span class="msg">the contact on file approved</span></div>
+            <div class="ln gw"><span class="who">gateway</span><span class="msg">decision: allow<span class="ref" aria-hidden="true">[4]</span></span></div>
+            <div class="ln"><span class="who">tool</span><span class="msg">update_supplier_iban -&gt; <span class="ok">DONE (verified by app)</span></span></div>
+            <div class="ln"><span class="who">tool</span><span class="msg">same grant again   -&gt; <span class="no">REFUSED (used)</span><span class="ref" aria-hidden="true">[5]</span></span></div>
+          </div>
+        </div>
+        <ol class="notes">
+          <li>The gateway answers "verify first". The caller hears no score and no rule.</li>
+          <li>The agent says only that it will confirm with the contact already on file. The challenge never goes to details given during the call.</li>
+          <li>Until a grant exists, the protected tool refuses to run.</li>
+          <li>After the contact on file approves, the gateway allows the action and issues a grant bound to that exact action and its exact parameters.</li>
+          <li>The grant is single-use. Presenting it a second time is refused.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="open" aria-labelledby="open-h">
+    <div class="wrap">
+      <p class="kicker">Open core</p>
+      <h2 id="open-h">Open source and hosted</h2>
+      <p class="intro">The gateway is open source. Hosted detection is the commercial part.</p>
+      <div class="cols">
+        <div class="card accented">
+          <span class="tag">Open source, Apache-2.0</span>
+          <h3>The gateway and everything around it</h3>
+          <ul>
+            <li>The gateway</li>
+            <li>Its policy format</li>
+            <li>The clients</li>
+            <li>The benchmark</li>
+          </ul>
+        </div>
+        <div class="card accented">
+          <span class="tag">Hosted, commercial</span>
+          <h3>Hosted detection</h3>
+          <ul>
+            <li>A larger scam-pattern library</li>
+            <li>Web fact-check of claimed numbers and IBANs</li>
+            <li>Synthetic-voice detection</li>
+          </ul>
+        </div>
+      </div>
+      <p class="after">Self-hosted works on its own with built-in rules.</p>
+    </div>
+  </section>
+
+  <section id="benchmark" aria-labelledby="bench-h">
+    <div class="wrap">
+      <p class="kicker">The benchmark</p>
+      <h2 id="bench-h">A public benchmark that measures one thing</h2>
+      <div class="prose">
+        <p>The benchmark pairs scam calls with legitimate calls, in English and French, in text and audio. It measures whether the protected action runs.</p>
+        <p>Results are published in the repository. That includes false refusals: the legitimate calls the gateway turned away.</p>
+        <p><a href="https://github.com/anticlus/anticlus">See the benchmark in the repository</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="name" aria-labelledby="name-h">
+    <div class="wrap">
+      <p class="kicker">Odyssey, book 4</p>
+      <h2 id="name-h">Why the name</h2>
+      <div class="name">
+        <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 78V52l-6-8 10-22 14-8 6 10-8 8v10h30l8 10v26"/>
+          <path d="M38 78V62M60 78V62"/>
+          <path d="M12 84h72"/>
+          <circle cx="34" cy="26" r="1.6" fill="currentColor" stroke="none"/>
+        </svg>
+        <div class="prose">
+          <p>Anticlus was a Greek soldier inside the Trojan horse. When Helen imitated his wife's voice, he was about to answer. Odysseus clamped a hand over his mouth, and the ruse failed (Odyssey, book 4).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Anticlus. An authorization gateway for voice agents.</p>
+    <p>Contact: <a href="mailto:hello@anticlus.ai">hello@anticlus.ai</a> &middot; <a href="https://github.com/anticlus/anticlus">GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

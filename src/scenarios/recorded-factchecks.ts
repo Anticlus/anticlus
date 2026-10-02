@@ -2,8 +2,8 @@ import type { FactCheck } from '../contract.js';
 import { factCheckOf } from '../scorer/factcheck.js';
 
 /**
- * The web check is an H run, so it is the one input recorded for the scripted
- * scenarios: the findings an H run returns, scored by Gilles's own
+ * The web check runs outside this package, so it is the one input recorded for the scripted
+ * scenarios: the findings such a check returns, scored by the scorer's own
  * `factCheckOf`. Everything else in a replay is computed for real.
  */
 export function recorded(findings: Record<string, unknown>): FactCheck {

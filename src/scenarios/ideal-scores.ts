@@ -1,10 +1,10 @@
 import {
-  sentinelScoreResultSchema,
+  callScoreSchema,
   type Claim,
   type ClaimKind,
   type ClaimStatus,
   type Scenario,
-  type SentinelScoreResult,
+  type CallScore,
   type SignalId
 } from '../contract.js';
 import { SCENARIOS } from './scenarios.js';
@@ -16,7 +16,7 @@ import { SCENARIOS } from './scenarios.js';
  * `risk` is the sum of the signal weights ONLY. A contradicted claim is not
  * added to it: the gateway judges contradictions on their own (deny), and
  * adding a heavy weight here would push a tier-3 call over its risk limit and
- * make `deny` unreachable (see the report note on BR-5 against BR-9).
+ * make `deny` unreachable.
  */
 
 const byId = new Map<string, Scenario>(SCENARIOS.map((s) => [s.id, s]));
@@ -46,7 +46,7 @@ function build(
     matchedId: string | null;
     contradicted?: boolean;
   }
-): SentinelScoreResult {
+): CallScore {
   const signals = o.signals.map(([id, weight, turn, quote]) => {
     if (!turnText(scenarioId, turn).includes(quote)) {
       throw new Error(`${scenarioId}: quote "${quote}" is not in turn ${turn}`);
@@ -62,7 +62,7 @@ function build(
     sources: c.sources ?? [],
     turn: c.turn
   }));
-  return sentinelScoreResultSchema.parse({
+  return callScoreSchema.parse({
     conversationId: scenarioId,
     risk: Math.min(
       100,
@@ -83,7 +83,7 @@ function build(
 
 const FILE = (id: string): string[] => [`fixture:counterparty/${id}`];
 
-export const IDEAL_SCORES: Readonly<Record<string, SentinelScoreResult>> = {
+export const IDEAL_SCORES: Readonly<Record<string, CallScore>> = {
   // risk 35 (< 40): the contradicted IBAN decides, not the risk
   'a1-iban-change-urgent': build('a1-iban-change-urgent', {
     claimedName: 'Acme Industrial',

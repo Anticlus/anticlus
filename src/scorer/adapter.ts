@@ -6,7 +6,7 @@ import {
   type FactCheck,
   type ScoreResult as ScoringResult,
   type Scorer,
-  type SentinelScoreResult,
+  type CallScore,
   type Signal,
   type SignalId,
   type Turn
@@ -14,17 +14,17 @@ import {
 import { scoreScript } from './script.js';
 
 /**
- * Adapts Gilles's scoring tools (`apps/server/src/scoring`, risk 0..100 from weighted
+ * Adapts the rule-based scoring tools (`./script.ts`, risk 0..100 from weighted
  * reasons) to the gateway's `Scorer`. The gateway keeps the decision and the
  * trust; this only turns what the scoring tools found into signals, claims,
  * a counterparty match and one risk number.
  *
  * What it does not do: raise trust (a score never does, BR-4), fetch the web
- * (a fact-check is an H run that arrives through `factCheckFor`), or touch the
+ * (a fact-check is a web check that arrives through `factCheckFor`), or touch the
  * database (history arrives through `historyFor`).
  */
 
-/** Gilles's reason codes mapped to the contract's signals. A code not listed still counts in the risk, but is not a social-engineering signal. */
+/** The scoring tools' reason codes mapped to the contract's signals. A code not listed still counts in the risk, but is not a social-engineering signal. */
 const SIGNAL_FOR_CODE: Readonly<Record<string, SignalId>> = {
   urgency: 'urgency',
   authority: 'authority',
@@ -41,7 +41,7 @@ const SIGNAL_FOR_CODE: Readonly<Record<string, SignalId>> = {
 /**
  * Two signals the scoring tools do not have yet: asking the agent to remember
  * an instruction (memory poisoning) and asking for remote access. English and
- * French, like the rest of his rules.
+ * French, like the rest of the rules.
  */
 const SUPPLEMENT: ReadonlyArray<{ id: SignalId; code: string; weight: number; patterns: readonly RegExp[] }> =
   [
@@ -71,7 +71,7 @@ export interface ScoringScorerOptions {
   counterparties: readonly Counterparty[];
   /** What is known of the call besides its words. A neutral browser call by default. */
   metadataFor?: (conversationId: string) => CallMetadata | undefined;
-  /** The conversation's fact-check (an H run), when there is one. `running` reads as pending, never as confirmed (BR-10). */
+  /** The conversation's fact-check, when there is one. `running` reads as pending, never as confirmed. */
   factCheckFor?: (conversationId: string) => FactCheck | null | undefined;
   /** The history score of the caller, when the caller's previous calls are known. Adds reasons, never subtracts. */
   historyFor?: (conversationId: string) => Promise<ScoringResult | null> | ScoringResult | null;
@@ -92,6 +92,9 @@ const host = (v: string) =>
     .replace(/^www\./, '')
     .replace(/\/.*$/, '');
 
+/** The name on file and the other ways it is said or transcribed. */
+const namesOf = (c: Counterparty): string[] => [c.name, ...(c.aliases ?? [])];
+
 /** The counterparty the caller named: the one the gateway already matched, else a name whose first word (4+ letters) is the same. */
 function matchCounterparty(
   claimedName: string | null,
@@ -102,7 +105,7 @@ function matchCounterparty(
   if (!claimedName) return null;
   const token = firstToken(claimedName);
   if (token.length < 4) return null;
-  return counterparties.find((c) => firstToken(c.name) === token) ?? null;
+  return counterparties.find((c) => namesOf(c).some((name) => firstToken(name) === token)) ?? null;
 }
 
 /**
@@ -131,15 +134,17 @@ function isReference(words: readonly string[], at: number): boolean {
  */
 function namedOnFile(transcript: string, counterparties: readonly Counterparty[]): Counterparty | null {
   const words = normalize(transcript).split(' ');
-  const hits = counterparties.filter((c) => {
-    const name = normalize(c.name).split(' ');
-    const token = name[0] ?? '';
-    return words.some((word, at) => {
-      const full = name.every((part, i) => words[at + i] === part);
-      const short = token.length >= 4 && word === token;
-      return (full || short) && !isReference(words, at);
-    });
-  });
+  const hits = counterparties.filter((c) =>
+    namesOf(c).some((raw) => {
+      const name = normalize(raw).split(' ');
+      const token = name[0] ?? '';
+      return words.some((word, at) => {
+        const full = name.every((part, i) => words[at + i] === part);
+        const short = token.length >= 4 && word === token;
+        return (full || short) && !isReference(words, at);
+      });
+    })
+  );
   return hits.length === 1 ? hits[0]! : null;
 }
 
@@ -159,7 +164,7 @@ const clip = (v: string, n = 160) => (v.length > n ? v.slice(0, n) : v);
 export function createScoringScorer(options: ScoringScorerOptions): Scorer {
   const now = options.now ?? (() => new Date());
 
-  return async (input): Promise<SentinelScoreResult> => {
+  return async (input): Promise<CallScore> => {
     const turns = input.turns;
     // Only the caller's words are scored: what the agent says is not evidence about the caller.
     const transcript = turns

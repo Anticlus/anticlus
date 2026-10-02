@@ -21,7 +21,7 @@ function newGateway() {
   });
 }
 
-describe('Sentinel: the gateway on Gilles’s real scorer', () => {
+describe('the gateway on the rule scorer', () => {
   it('runs every scenario and never lets an attack through', async () => {
     const report = await runScenarios(SCENARIOS, async (s) => {
       const gateway = newGateway();

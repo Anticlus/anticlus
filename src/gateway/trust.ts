@@ -1,4 +1,4 @@
-import type { Counterparty, SentinelScoreResult, TrustLevel, VerificationResult } from '../contract.js';
+import type { Counterparty, CallScore, TrustLevel, VerificationResult } from '../contract.js';
 
 export type CounterpartyIndex = ReadonlyMap<string, Counterparty>;
 
@@ -8,7 +8,7 @@ export function indexCounterparties(list: readonly Counterparty[]): Map<string, 
 
 /** The record the scorer matched, only when it really is on file. */
 export function matchedCounterparty(
-  score: SentinelScoreResult,
+  score: CallScore,
   counterparties: CounterpartyIndex
 ): Counterparty | null {
   const id = score.counterparty.matchedId;
@@ -17,16 +17,16 @@ export function matchedCounterparty(
 
 /**
  * The trust level of a conversation. Pure, and deliberately blind to signals,
- * risk and how long or how politely the caller talks (BR-4).
- *  - BR-1: anonymous by default.
- *  - BR-2: identified when the caller names a counterparty on file and nothing
+ * risk and how long or how politely the caller talks.
+ *  - anonymous by default.
+ *  - identified when the caller names a counterparty on file and nothing
  *    contradicts it.
- *  - BR-3: verified only when a verification PASSED for that same counterparty
+ *  - verified only when a verification PASSED for that same counterparty
  *    outside the conversation, and none failed.
  * A contradiction drops the conversation back to anonymous.
  */
 export function computeTrust(
-  score: SentinelScoreResult,
+  score: CallScore,
   verifications: readonly VerificationResult[],
   counterparties: CounterpartyIndex
 ): TrustLevel {

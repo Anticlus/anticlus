@@ -85,7 +85,7 @@ export function summarize(rows: readonly ScenarioRow[]): ScenarioSummary {
   };
 }
 
-/** The jury table: one line per scenario, then the totals. */
+/** The results table: one line per scenario, then the totals. */
 export function formatTable(report: ScenarioReport): string {
   const { rows, summary: s } = report;
   const cols = ['scenario', 'kind', 'held out', 'expected', 'got', 'result'];

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { VerificationKind } from './contract.js';
-import { MemoryStore, type SentinelStore } from './gateway/store.js';
+import { MemoryStore, type GatewayStore } from './gateway/store.js';
 
 /**
  * Step-up verification through the CLIENT's own MFA system.
@@ -38,7 +38,7 @@ export interface Challenge {
 }
 
 /** What the HTTP server needs on top of the gateway's store. */
-export interface LiveStore extends SentinelStore {
+export interface LiveStore extends GatewayStore {
   saveChallenge(challenge: Challenge): Promise<void>;
   getChallenge(id: string): Promise<Challenge | null>;
   /** The challenge still waiting for this exact request, if any (so a repeated guard does not open a second one). */

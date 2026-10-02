@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { plainText } from './plain-text.js';
 
 /**
- * Scoring: the three scam-risk tools of Scam Sentinel, on ONE scale.
+ * Scoring: the scam-risk tools, on ONE scale.
  *
  *  - `script`: what is said (the transcript so far) and the call's metadata.
  *  - `history`: the previous calls of this caller and of the organization it claims.
@@ -173,7 +173,7 @@ export const factCheckRequestSchema = z.object({
 });
 export type FactCheckRequest = z.infer<typeof factCheckRequestSchema>;
 
-/** A fact-check is an H run: `id` is the run's id; poll `GET /scoring/factcheck/{id}`. */
+/** A fact-check is asynchronous: `id` identifies the running check. */
 export const factCheckSchema = scoreResultSchema.extend({
   id: z.string(),
   state: z.enum(['running', 'completed', 'failed']),

@@ -27,6 +27,7 @@ export const SEED_COUNTERPARTIES: readonly Counterparty[] = [
   {
     id: 'bruxfresh',
     name: 'Brussels Fresh Foods SRL',
+    aliases: ['Bruxelles Fresh Foods'],
     registryNumber: '0999.000.003',
     officialPhone: '+3225550103',
     officialDomain: 'bruxfresh.example',

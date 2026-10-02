@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SentinelScoreResult } from '../src/contract.js';
+import type { CallScore } from '../src/contract.js';
 import { SEED_COUNTERPARTIES } from '../src/seed.js';
 import { MemoryStore, createGateway } from '../src/gateway/index.js';
 import { SCENARIOS } from '../src/scenarios/scenarios.js';
@@ -7,7 +7,7 @@ import { IDEAL_SCORES } from '../src/scenarios/ideal-scores.js';
 import { formatTable, runScenarios } from '../src/scenarios/runner.js';
 
 function gatewayFor(scenarioId: string) {
-  const score = IDEAL_SCORES[scenarioId] as SentinelScoreResult;
+  const score = IDEAL_SCORES[scenarioId] as CallScore;
   return createGateway({
     scorer: async (input) => ({ ...score, conversationId: input.conversationId }),
     store: new MemoryStore(),
@@ -16,7 +16,7 @@ function gatewayFor(scenarioId: string) {
   });
 }
 
-describe('Sentinel: every scenario through the gateway with its ideal score', () => {
+describe('every scenario through the gateway with its ideal score', () => {
   it('gets the expected decision for all scenarios, held-out ones included', async () => {
     const report = await runScenarios(SCENARIOS, async (s) => {
       const gateway = gatewayFor(s.id);

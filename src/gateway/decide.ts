@@ -2,14 +2,14 @@ import type {
   ActionPolicy,
   Counterparty,
   Decision,
-  SentinelScoreResult,
+  CallScore,
   TrustLevel,
   VerificationRequest
 } from '../contract.js';
 
 const TRUST_RANK: Record<TrustLevel, number> = { anonymous: 0, identified: 1, verified: 2 };
 
-/** The rule ids. They go to the audit trail only, never to the caller (BR-11). */
+/** The rule ids. They go to the audit trail only, never to the caller. */
 export const RULES = {
   riskOverLimit: 'risk_over_limit',
   claimContradicted: 'claim_contradicted',
@@ -23,7 +23,7 @@ export const RULES = {
 export interface DecideInput {
   policy: ActionPolicy;
   trust: TrustLevel;
-  score: SentinelScoreResult;
+  score: CallScore;
   params: Readonly<Record<string, string>>;
   /** A fact-check for this conversation is still running. */
   factCheckPending: boolean;
@@ -60,7 +60,7 @@ function out(
  *     trust check, so a contradicted caller is refused, not asked to verify);
  *  3. trust below what the action needs: verify first, through the official
  *     contact details on file, never through ones given in the conversation;
- *  4. a fact-check that has not come back (BR-10): verify first;
+ *  4. a fact-check that has not come back: verify first;
  *  5. allow.
  */
 export function decide(input: DecideInput): DecideOutput {

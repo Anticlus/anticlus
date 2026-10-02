@@ -3,7 +3,7 @@ import {
   DEFAULT_ACTION_POLICIES,
   type ActionPolicy,
   type Claim,
-  type SentinelScoreResult,
+  type CallScore,
   type Scorer,
   type Turn,
   type VerificationResult
@@ -48,10 +48,10 @@ function claim(over: Partial<Claim> = {}): Claim {
 }
 
 function score(
-  over: Partial<Omit<SentinelScoreResult, 'counterparty'>> & {
-    counterparty?: Partial<SentinelScoreResult['counterparty']>;
+  over: Partial<Omit<CallScore, 'counterparty'>> & {
+    counterparty?: Partial<CallScore['counterparty']>;
   } = {}
-): SentinelScoreResult {
+): CallScore {
   const { counterparty, ...rest } = over;
   return {
     conversationId: 'conv-1',
@@ -180,7 +180,7 @@ describe('decide: the order of the rules', () => {
     expect(out.verification).toBeNull();
   });
 
-  it('waits for the fact-check: pending, unchecked, missing or still running is not confirmed (BR-10)', () => {
+  it('waits for the fact-check: pending, unchecked, missing or still running is not confirmed', () => {
     const base = { trust: 'verified', counterparty: ACME } as const;
     for (const status of ['pending', 'unchecked'] as const) {
       const out = decide(
@@ -213,7 +213,7 @@ describe('decide: the order of the rules', () => {
     expect(out).toMatchObject({ decision: 'allow', rule: RULES.allowed });
   });
 
-  it('never says a rule id, a figure or an internal word to the caller (BR-11)', () => {
+  it('never says a rule id, a figure or an internal word to the caller', () => {
     const cases: DecideInput[] = [
       input('update_supplier_iban', { trust: 'verified', score: score({ risk: 90 }), counterparty: ACME }),
       input('update_supplier_iban', {
@@ -237,21 +237,21 @@ describe('decide: the order of the rules', () => {
 });
 
 describe('trust: only a verification outside the conversation raises it', () => {
-  it('is anonymous by default and when nothing is matched or the match is not on file (BR-1)', () => {
+  it('is anonymous by default and when nothing is matched or the match is not on file', () => {
     expect(computeTrust(score(), [], COUNTERPARTIES)).toBe('anonymous');
     expect(computeTrust(score({ counterparty: { matchedId: 'ghost' } }), [], COUNTERPARTIES)).toBe(
       'anonymous'
     );
   });
 
-  it('is identified when the caller names a known counterparty and nothing contradicts it (BR-2)', () => {
+  it('is identified when the caller names a known counterparty and nothing contradicts it', () => {
     expect(computeTrust(score({ counterparty: ACME_MATCH }), [], COUNTERPARTIES)).toBe('identified');
     expect(
       computeTrust(score({ counterparty: { ...ACME_MATCH, contradicted: true } }), [], COUNTERPARTIES)
     ).toBe('anonymous');
   });
 
-  it('is verified only after a passed verification for that same counterparty (BR-3)', () => {
+  it('is verified only after a passed verification for that same counterparty', () => {
     const acme = score({ counterparty: ACME_MATCH });
     expect(computeTrust(acme, [passed('acme')], COUNTERPARTIES)).toBe('verified');
     expect(computeTrust(acme, [passed('delta')], COUNTERPARTIES)).toBe('identified');
@@ -266,7 +266,7 @@ describe('trust: only a verification outside the conversation raises it', () => 
     expect(computeTrust(acme, [passed('acme'), failed('acme')], COUNTERPARTIES)).toBe('identified');
   });
 
-  it('does not move with signals, risk, claims or the length of the call (BR-4)', () => {
+  it('does not move with signals, risk, claims or the length of the call', () => {
     const calm = score({ counterparty: ACME_MATCH });
     const loud = score({
       counterparty: ACME_MATCH,
@@ -291,7 +291,7 @@ describe('canonical hashing', () => {
 /** A gateway, a back office and a mutable scorer on a controllable clock. */
 function setup(options: { scorerTimeoutMs?: number; factCheckPending?: boolean } = {}) {
   let clock = new Date('2026-10-02T12:00:00.000Z');
-  const state: { result: SentinelScoreResult | (() => Promise<SentinelScoreResult>) } = { result: score() };
+  const state: { result: CallScore | (() => Promise<CallScore>) } = { result: score() };
   const scorer: Scorer = async () => (typeof state.result === 'function' ? state.result() : state.result);
   const store = new MemoryStore();
   const gateway = createGateway({
@@ -352,7 +352,7 @@ describe('gateway: the bank-account change', () => {
     expect(decision.audit.rule).toBe(RULES.claimContradicted);
   });
 
-  it('allows after a passed callback and a confirmed claim, and records how the account was verified (BR-12)', async () => {
+  it('allows after a passed callback and a confirmed claim, and records how the account was verified', async () => {
     const t = setup();
     await t.gateway.addTurn('conv-1', turn('We changed banks.'));
     t.state.result = score({ risk: 5, counterparty: ACME_MATCH, claims: [claim()] });
@@ -449,7 +449,7 @@ describe('gateway: fail closed', () => {
   it('escalates when the scorer does not answer in time', async () => {
     const t = setup({ scorerTimeoutMs: 20 });
     await t.gateway.addTurn('conv-1', turn('Hello'));
-    t.state.result = () => new Promise<SentinelScoreResult>(() => {});
+    t.state.result = () => new Promise<CallScore>(() => {});
     const decision = await t.gateway.guard(ibanRequest());
     expect(decision.decision).toBe('escalate');
     expect(decision.audit.rule).toBe('scorer_failed');
@@ -458,7 +458,7 @@ describe('gateway: fail closed', () => {
   it('escalates when the scorer answers something that is not a score', async () => {
     const t = setup();
     await t.gateway.addTurn('conv-1', turn('Hello'));
-    t.state.result = async () => ({ risk: 'low' }) as unknown as SentinelScoreResult;
+    t.state.result = async () => ({ risk: 'low' }) as unknown as CallScore;
     expect((await t.gateway.guard(ibanRequest())).decision).toBe('escalate');
   });
 

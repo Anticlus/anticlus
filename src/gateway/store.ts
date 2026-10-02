@@ -11,13 +11,13 @@ export interface ConversationRecord {
 /** A grant plus what the gateway knew when it issued it (the contract's Grant stays the wire shape). */
 export interface GrantRecord extends Grant {
   counterpartyId: string | null;
-  /** How the counterparty was verified in this conversation, when it was (BR-12). */
+  /** How the counterparty was verified in this conversation, when it was. */
   verifiedBy: VerificationKind | null;
 }
 
 /**
  * One row per decision. Holds no transcript, no parameter values and no score
- * breakdown: the parameters appear only as their hash (BR-18).
+ * breakdown: the parameters appear only as their hash.
  */
 export interface AuditRow {
   id: string;
@@ -34,7 +34,7 @@ export interface AuditRow {
 }
 
 /** What the gateway needs from storage. `MemoryStore` today, a Postgres store later. */
-export interface SentinelStore {
+export interface GatewayStore {
   ensureConversation(id: string): Promise<ConversationRecord>;
   appendTurn(id: string, turn: Turn): Promise<void>;
   addVerification(id: string, result: VerificationResult): Promise<void>;
@@ -47,7 +47,7 @@ export interface SentinelStore {
   listAudit(conversationId?: string): Promise<AuditRow[]>;
 }
 
-export class MemoryStore implements SentinelStore {
+export class MemoryStore implements GatewayStore {
   protected readonly conversations = new Map<string, ConversationRecord>();
   protected readonly grants = new Map<string, GrantRecord>();
   protected readonly audit: AuditRow[] = [];
