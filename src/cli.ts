@@ -37,6 +37,7 @@ const app = createApp({
     tool: required('ANTICLUS_TOOL_KEY'),
     admin: required('ANTICLUS_ADMIN_KEY')
   },
+  scorerTimeoutMs: process.env.ANTICLUS_SCORER_TIMEOUT_MS ? Number(process.env.ANTICLUS_SCORER_TIMEOUT_MS) : undefined,
   mfa: {
     secret: required('ANTICLUS_MFA_SECRET'),
     webhookUrl: process.env.ANTICLUS_MFA_WEBHOOK_URL

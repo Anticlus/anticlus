@@ -118,6 +118,7 @@ The gateway is configured through environment variables and two JSON files.
 | `ANTICLUS_MFA_WEBHOOK_URL` | no | Where challenges are posted. Without it, a challenge is only returned to the agent host |
 | `ANTICLUS_POLICIES` | no | Path to the policies file. Without it, four built-in defaults apply (see the note below) |
 | `ANTICLUS_SCORER_URL` | no | A remote scorer. Without it, the built-in rules are used |
+| `ANTICLUS_SCORER_TIMEOUT_MS` | no | How long a scorer may take before the call counts as maximal risk (default 2000; set 4000 or more for an LLM-backed scorer) |
 | `ANTICLUS_SCORER_KEY` | no | Bearer key sent to the remote scorer |
 | `ANTICLUS_DB` | no | SQLite file. Default `anticlus.db` in the working directory; `/data/anticlus.db` in the Docker image |
 | `PORT` | no | Default `8787` |

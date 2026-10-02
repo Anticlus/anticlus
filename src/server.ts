@@ -50,6 +50,8 @@ export interface ServerOptions {
     challengeTtlMs?: number;
     verificationTtlMs?: number;
   };
+  /** How long the scorer may take before the gateway treats the call as maximal risk. */
+  scorerTimeoutMs?: number;
   now?: () => Date;
   fetchImpl?: typeof fetch;
   onWebhookError?: (error: unknown, challenge: Challenge) => void;
@@ -89,6 +91,7 @@ export function createApp(options: ServerOptions): Hono {
     counterparties: options.counterparties,
     policies: options.policies ?? DEFAULT_ACTION_POLICIES,
     now,
+    scorerTimeoutMs: options.scorerTimeoutMs,
     requireBoundVerification: true
   });
 
