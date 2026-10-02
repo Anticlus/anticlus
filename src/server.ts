@@ -52,6 +52,8 @@ export interface ServerOptions {
   };
   /** How long the scorer may take before the gateway treats the call as maximal risk. */
   scorerTimeoutMs?: number;
+  /** Score in the background on every turn (for a remote scorer that caches). */
+  prescoreOnTurn?: boolean;
   now?: () => Date;
   fetchImpl?: typeof fetch;
   onWebhookError?: (error: unknown, challenge: Challenge) => void;
@@ -92,6 +94,7 @@ export function createApp(options: ServerOptions): Hono {
     policies: options.policies ?? DEFAULT_ACTION_POLICIES,
     now,
     scorerTimeoutMs: options.scorerTimeoutMs,
+    prescoreOnTurn: options.prescoreOnTurn ?? false,
     requireBoundVerification: true
   });
 

@@ -655,3 +655,37 @@ describe('the back office: no route around the gateway', () => {
     expect(t.erp.supplier('delta')?.contactPerson).toBe('Pieter Janssens');
   });
 });
+
+describe('gateway: pre-scoring on each turn', () => {
+  it('asks the scorer when a turn arrives, and ignores a scorer that fails there', async () => {
+    const calls: number[] = [];
+    let fail = true;
+    const gateway = createGateway({
+      scorer: async (input) => {
+        calls.push(input.turns.length);
+        if (fail) throw new Error('not yet');
+        return {
+          conversationId: input.conversationId,
+          risk: 0,
+          signals: [],
+          claims: [],
+          counterparty: { claimedName: null, matchedId: null, contradicted: false },
+          patternsMatched: [],
+          llmUsed: false,
+          scoredTurns: input.turns.length
+        };
+      },
+      store: new MemoryStore(),
+      counterparties: SEED_COUNTERPARTIES,
+      prescoreOnTurn: true
+    });
+    await gateway.addTurn('c', { role: 'caller', text: 'Hello.' });
+    await gateway.addTurn('c', { role: 'caller', text: 'Opening hours?' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls).toEqual([1, 2]);
+    fail = false;
+    const decision = await gateway.guard({ conversationId: 'c', action: 'get_opening_hours', params: {} });
+    expect(decision.decision).toBe('allow');
+    expect(calls).toEqual([1, 2, 2]);
+  });
+});

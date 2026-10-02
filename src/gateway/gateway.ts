@@ -49,6 +49,12 @@ export interface GatewayOptions {
    * counts. Off by default for in-process use; the HTTP server turns it on.
    */
   requireBoundVerification?: boolean;
+  /**
+   * Score the conversation in the background each time a turn arrives, so a
+   * scorer that caches by turns answers the guard from its cache. The result is
+   * discarded here; a failure is ignored (the guard scores again and fails closed).
+   */
+  prescoreOnTurn?: boolean;
 }
 
 export interface Gateway {
@@ -156,6 +162,7 @@ export function createGateway(options: GatewayOptions): Gateway {
   return {
     async addTurn(conversationId, turn) {
       await store.appendTurn(conversationId, turnSchema.parse(turn));
+      if (options.prescoreOnTurn) void score(conversationId).catch(() => undefined);
     },
 
     async recordVerification(result) {
