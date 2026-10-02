@@ -6,7 +6,7 @@ import { plainText } from './plain-text.js';
  *
  *  - `script`: what is said (the transcript so far) and the call's metadata.
  *  - `history`: the previous calls of this caller and of the organization it claims.
- *  - `factcheck`: H's agent checks the caller's claims on the web.
+ *  - `factcheck`: a web agent checks the caller's claims on the web.
  *
  * Every tool answers a risk score from 0 (nothing suspicious) to 100 (a scam),
  * built the same way: each reason carries a weight between 0 and 1, and the

@@ -7,13 +7,13 @@ import {
 } from '../contract.js';
 
 /**
- * The fact-check tool: H's agent checks the caller's claims on the web, and
+ * The fact-check tool: a web agent checks the caller's claims on the web, and
  * its answer is scored 0–100.
  *
  * The task is narrow on purpose (fast, reliable, demoable): find the claimed
  * organization's official site and phone numbers, from the Belgian registry
  * when useful, then say whether the caller's number and the IBAN appear
- * there. H answers one JSON object; nothing it reads is ever taken as an
+ * there. The agent answers one JSON object; nothing it reads is ever taken as an
  * instruction, only as evidence (the parser keeps known fields only).
  */
 
@@ -53,7 +53,7 @@ const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null)
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, 20) : [];
 
-/** The findings in H's answer: the first JSON object in it, known fields only; null when there is none. */
+/** The findings in the answer: the first JSON object in it, known fields only; null when there is none. */
 export function parseFindings(answer: string | null): (Findings & { domainOfficial: boolean | null }) | null {
   if (!answer) return null;
   const start = answer.indexOf('{');

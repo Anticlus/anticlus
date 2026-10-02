@@ -19,7 +19,7 @@ import { scoreScript } from './script.js';
  * trust; this only turns what the scoring tools found into signals, claims,
  * a counterparty match and one risk number.
  *
- * What it does not do: raise trust (a score never does, BR-4), fetch the web
+ * What it does not do: raise trust (a score never does), fetch the web
  * (a fact-check is a web check that arrives through `factCheckFor`), or touch the
  * database (history arrives through `historyFor`).
  */

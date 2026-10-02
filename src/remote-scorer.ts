@@ -1,4 +1,4 @@
-import { sentinelScoreResultSchema, type Scorer } from './contract.js';
+import { callScoreSchema, type Scorer } from './contract.js';
 
 /**
  * A scorer behind an HTTP endpoint (the hosted one, or your own). It receives
@@ -13,6 +13,6 @@ export function createRemoteScorer(url: string, apiKey?: string, fetchImpl: type
       body: JSON.stringify(input)
     });
     if (!res.ok) throw new Error(`scorer answered ${res.status}`);
-    return sentinelScoreResultSchema.parse(await res.json());
+    return callScoreSchema.parse(await res.json());
   };
 }
