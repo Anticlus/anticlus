@@ -131,6 +131,7 @@ export function createApp(options: ServerOptions): Hono {
   app.post('/v1/conversations/:id/turns', bearer(keys.agent), async (c) => {
     const turn = turnSchema.safeParse(await c.req.json().catch(() => null));
     if (!turn.success) return c.json({ error: 'invalid_turn' }, 400);
+    if (await store.isEnded(c.req.param('id')!)) return c.json({ error: 'conversation_ended' }, 410);
     await gateway.addTurn(c.req.param('id')!, turn.data);
     return c.body(null, 204);
   });
@@ -143,6 +144,8 @@ export function createApp(options: ServerOptions): Hono {
   app.post('/v1/guard', bearer(keys.agent), async (c) => {
     const req = guardRequestSchema.safeParse(await c.req.json().catch(() => null));
     if (!req.success) return c.json({ error: 'invalid_request' }, 400);
+    // An ended conversation is never reopened: starting over under the same id would shed a failed verification.
+    if (await store.isEnded(req.data.conversationId)) return c.json({ error: 'conversation_ended' }, 410);
     const decision = await gateway.guard(req.data);
 
     let challenge: Challenge | null = null;

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS challenges (
   params_hash TEXT NOT NULL, kind TEXT NOT NULL, target TEXT NOT NULL, created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL, completed_at TEXT, passed INTEGER
 );
+CREATE TABLE IF NOT EXISTS ended_conversations (id TEXT PRIMARY KEY);
 CREATE INDEX IF NOT EXISTS challenges_open ON challenges (conversation_id, action, params_hash);
 `;
 
@@ -235,8 +236,13 @@ export class SqliteStore implements LiveStore {
     );
   }
 
+  async isEnded(id: string): Promise<boolean> {
+    return this.db.prepare('SELECT 1 FROM ended_conversations WHERE id = ?').get(id) !== undefined;
+  }
+
   async deleteConversation(id: string): Promise<void> {
     this.db.transaction(() => {
+      this.db.prepare('INSERT OR IGNORE INTO ended_conversations (id) VALUES (?)').run(id);
       this.db.prepare('DELETE FROM turns WHERE conversation_id = ?').run(id);
       this.db.prepare('DELETE FROM verifications WHERE conversation_id = ?').run(id);
       this.db.prepare('DELETE FROM challenges WHERE conversation_id = ?').run(id);

@@ -45,12 +45,17 @@ export interface LiveStore extends GatewayStore {
   findOpenChallenge(conversationId: string, action: string, paramsHash: string, now: string): Promise<Challenge | null>;
   /** Atomic: true only for the one caller that found the challenge unanswered. */
   completeChallenge(id: string, passed: boolean, at: string): Promise<boolean>;
-  /** The call is over: its turns, verifications, open challenges and unused grants go. Audit rows stay. */
+  /**
+   * The call is over: its turns, verifications, open challenges and unused grants go. Audit rows stay,
+   * and the id is remembered as ended so it cannot be reused to shed a failed verification.
+   */
   deleteConversation(id: string): Promise<void>;
+  isEnded(id: string): Promise<boolean>;
 }
 
 export class MemoryLiveStore extends MemoryStore implements LiveStore {
   private readonly challenges = new Map<string, Challenge>();
+  private readonly ended = new Set<string>();
 
   async saveChallenge(challenge: Challenge): Promise<void> {
     this.challenges.set(challenge.id, { ...challenge });
@@ -83,7 +88,12 @@ export class MemoryLiveStore extends MemoryStore implements LiveStore {
     return true;
   }
 
+  async isEnded(id: string): Promise<boolean> {
+    return this.ended.has(id);
+  }
+
   async deleteConversation(id: string): Promise<void> {
+    this.ended.add(id);
     this.conversations.delete(id);
     for (const [key, c] of this.challenges) if (c.conversationId === id) this.challenges.delete(key);
     for (const [key, g] of this.grants) if (g.conversationId === id && g.usedAt === null) this.grants.delete(key);

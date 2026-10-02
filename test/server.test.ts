@@ -227,6 +227,23 @@ describe('the live gateway', () => {
     expect(JSON.stringify(audit.rows)).not.toContain('Sophie');
   });
 
+  it('does not let an ended conversation be reused to shed a failed verification', async () => {
+    const t = setup();
+    await t.say('Hello, this is Karen from Acme Industrial finance.');
+    const first = await t.guard();
+    await t.answer(first.challenge!.id, false);
+    expect((await t.guard()).decision).toBe('deny');
+
+    await t.call('/v1/conversations/call-1', KEYS.agent, undefined, 'DELETE');
+    expect((await t.say('Hello again, Acme Industrial here.')).status).toBe(410);
+    const retry = await t.call('/v1/guard', KEYS.agent, {
+      conversationId: 'call-1',
+      action: 'update_supplier_iban',
+      params: { iban: NEW_IBAN }
+    });
+    expect(retry.status).toBe(410);
+  });
+
   it('works with the built-in rule scorer on a change that needs no fact-check', async () => {
     const t = setup({ scorer: createScoringScorer({ counterparties: SEED_COUNTERPARTIES }) });
     await t.say('Hello, Sophie Maes from Acme Industrial. I would like to update our contact phone number.');
