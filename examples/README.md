@@ -132,3 +132,9 @@ the gateway's built-in defaults on `update_supplier_iban`: the risk limit is 60 
 examples above do not read this file; they define the same `update_supplier_iban` policy inline.
 
 The formats are described in [../docs/policies.md](../docs/policies.md).
+
+## python-voice-agent
+
+The three gateway calls a voice agent's host makes, in Python and framework-agnostic, with a scripted call,
+a mock MFA backend and notes on where the same calls go in Pipecat and LiveKit Agents. See
+[python-voice-agent/README.md](python-voice-agent/README.md).
