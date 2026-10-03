@@ -1,12 +1,22 @@
 # Anticlus
 
-Anticlus is an authorization gateway for voice agents. It sits between an AI voice agent and the actions
-the agent can take. Before each protected action the agent's host asks the gateway; the gateway scores the
-call, checks the caller against the records on file, and answers `allow`, `verify_first`, `deny` or
-`escalate`. On `verify_first` it sends a signed challenge to the MFA system the company already has and
-waits for a signed result. On `allow` it issues a single-use grant bound to the action and its exact
-parameters, and the protected tool consumes that grant before it acts. Nothing the caller says, and
-nothing the model outputs, can produce a grant by itself.
+Anticlus is an authorization gateway for voice agents. It exists so that an AI voice agent can be given
+the permissions it is usually denied: changing a supplier's bank account, releasing a payment, updating
+contact details. Those stay with humans today because nothing said on a call can be trusted.
+
+The gateway sits between the agent and those actions. Before each protected action the agent's host asks
+the gateway, and the primary control is **verification outside the call**: a signed challenge to the MFA
+system the company already has (an app push, a one-time code, a callback to the number on file), bound to
+the exact action and parameters. On `allow` the gateway issues a single-use grant for those parameters, and
+the protected tool consumes it before it acts. Nothing the caller says, and nothing the model outputs, can
+produce a grant by itself.
+
+Detection comes second. The gateway matches the caller against the records on file and reads the call for
+social engineering, and that decides *whom* to verify with, whether verification is possible at all (an
+unknown caller or "the CEO" gets `deny` or `escalate`, not a push notification to nobody), and when a
+low-risk request may pass with no step-up. The answers are `allow`, `verify_first`, `deny` or `escalate`.
+In the benchmark, the three hardest attacks were stopped by the verification mechanics while the scorers
+saw nothing; see [benchmark/results](benchmark/results/README.md).
 
 Licence: Apache-2.0. Status: version 0.1.0, a single-node gateway. Read
 [Security model and limits](#security-model-and-limits) before putting it in front of anything real.

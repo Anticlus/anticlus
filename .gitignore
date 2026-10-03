@@ -7,3 +7,4 @@ dist
 benchmark/audio/
 benchmark/.cache/
 benchmark/audio-noisy/
+benchmark/audio-crosstalk/
