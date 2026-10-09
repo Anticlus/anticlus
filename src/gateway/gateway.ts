@@ -196,6 +196,11 @@ export function createGateway(options: GatewayOptions): Gateway {
         if (v.action === undefined && v.paramsHash === undefined) return !options.requireBoundVerification;
         return v.action === req.action && v.paramsHash === paramsHash;
       });
+      // A principal the host authenticated stands in for a name the caller gave, unless the scorer contradicts it.
+      const vouched = req.principal ? (counterparties.get(req.principal.counterpartyId) ?? null) : null;
+      if (vouched && !result.counterparty.matchedId && !result.counterparty.contradicted) {
+        result.counterparty = { claimedName: vouched.name, matchedId: vouched.id, contradicted: false };
+      }
       const counterparty = matchedCounterparty(result, counterparties);
       const trust = computeTrust(result, verifications, counterparties);
       if (counterparty && !result.counterparty.contradicted) {

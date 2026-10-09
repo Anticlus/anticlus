@@ -72,8 +72,18 @@ class AgentClient(_Base):
         if response.status_code != 204:
             raise ApiError.from_response(response)
 
-    def guard(self, conversation_id: str, action: str, params: Optional[Params] = None) -> GuardDecision:
-        body = {"conversationId": conversation_id, "action": action, "params": dict(params or {})}
+    def guard(
+        self,
+        conversation_id: str,
+        action: str,
+        params: Optional[Params] = None,
+        principal: Optional[Dict[str, str]] = None,
+    ) -> GuardDecision:
+        """Ask before a protected action. `principal` names the counterparty the host has authenticated
+        for this session, e.g. {"counterpartyId": "acme"}; set from the host's own session, never from the model."""
+        body: Dict[str, Any] = {"conversationId": conversation_id, "action": action, "params": dict(params or {})}
+        if principal is not None:
+            body["principal"] = dict(principal)
         response = self._request("POST", "/v1/guard", json=body)
         if response.status_code != 200:
             raise ApiError.from_response(response)

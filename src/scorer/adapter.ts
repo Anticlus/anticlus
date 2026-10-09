@@ -166,9 +166,9 @@ export function createScoringScorer(options: ScoringScorerOptions): Scorer {
 
   return async (input): Promise<CallScore> => {
     const turns = input.turns;
-    // Only the caller's words are scored: what the agent says is not evidence about the caller.
+    // The caller's words and what tools returned are scored; what the agent says is not evidence.
     const transcript = turns
-      .filter((t) => t.role === 'caller')
+      .filter((t) => t.role !== 'agent')
       .map((t) => t.text)
       .join('\n');
 
@@ -207,7 +207,7 @@ export function createScoringScorer(options: ScoringScorerOptions): Scorer {
     for (const rule of SUPPLEMENT) {
       for (const turnIndex of turns.keys()) {
         const turn = turns[turnIndex]!;
-        if (turn.role !== 'caller') continue;
+        if (turn.role === 'agent') continue;
         const match = rule.patterns.map((p) => p.exec(turn.text)).find(Boolean);
         if (!match) continue;
         keep({ id: rule.id, weight: Math.round(rule.weight * 100), quote: clip(match[0]), turn: turnIndex });

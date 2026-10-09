@@ -52,8 +52,13 @@ export type Counterparty = z.infer<typeof counterpartySchema>;
 // ---- The scorer -------------------------------------------------------------
 
 export const turnSchema = z.object({
-  /** `caller` is whoever is on the other end, whatever they claim to be. */
-  role: z.enum(['caller', 'agent']),
+  /**
+   * `caller` is whoever is on the other end, whatever they claim to be; `tool` is
+   * content a tool returned to the agent (a file, a web page, a transaction
+   * subject), which is just as untrusted: an instruction found in it was not
+   * given by the user.
+   */
+  role: z.enum(['caller', 'agent', 'tool']),
   text: plainText(1, CALL_TURN_MAX),
   /** ISO time of the turn, when the channel gave one. */
   at: z.iso.datetime().optional()
@@ -207,7 +212,16 @@ export const guardRequestSchema = z.object({
   /** Bound by the host to the MCP session, NEVER taken from the model's arguments (an injected prompt could name another conversation). */
   conversationId: z.string().min(1).max(64),
   action: z.string().min(1).max(64),
-  params: z.record(z.string(), z.string().max(500)).default({})
+  params: z.record(z.string(), z.string().max(500)).default({}),
+  /**
+   * The counterparty the HOST has authenticated for this session (a caller who
+   * signed in to the company's app before the call, an account holder in a
+   * logged-in session). Set by the host from its own session, never from the
+   * model. It starts the conversation as `identified`; a verification outside
+   * the call is still needed for `verified`, and a contradiction by the scorer
+   * still drops it.
+   */
+  principal: z.object({ counterpartyId: z.string().min(1).max(64) }).optional()
 });
 export type GuardRequest = z.infer<typeof guardRequestSchema>;
 
