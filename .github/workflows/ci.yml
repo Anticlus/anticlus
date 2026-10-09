@@ -20,9 +20,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      # The transcript benchmark needs no key; it fails the build if the runner breaks.
-      - run: pnpm bench
-      - run: pnpm bench -- --set=heldout
 
   python-client:
     runs-on: ubuntu-latest

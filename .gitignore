@@ -4,7 +4,3 @@ dist
 *.db
 *.db-*
 .DS_Store
-benchmark/audio/
-benchmark/.cache/
-benchmark/audio-noisy/
-benchmark/audio-crosstalk/

@@ -32,7 +32,6 @@
     "test": "vitest run",
     "start": "tsx src/cli.ts",
     "example": "tsx examples/supplier-bank-change/run.ts",
-    "bench": "tsx benchmark/run-baseline.ts",
     "example:mcp": "tsx examples/mcp-proxy/run.ts"
   },
   "dependencies": {

@@ -15,8 +15,8 @@ Detection comes second. The gateway matches the caller against the records on fi
 social engineering, and that decides *whom* to verify with, whether verification is possible at all (an
 unknown caller or "the CEO" gets `deny` or `escalate`, not a push notification to nobody), and when a
 low-risk request may pass with no step-up. The answers are `allow`, `verify_first`, `deny` or `escalate`.
-In the benchmark, the three hardest attacks were stopped by the verification mechanics while the scorers
-saw nothing; see [benchmark/results](benchmark/results/README.md).
+In our own test set, the hardest attacks were stopped by the verification mechanics while the scorers
+saw nothing. That set is ours and is not evidence; see [Evaluation](#evaluation).
 
 Licence: Apache-2.0. Status: version 0.1.0, a single-node gateway. Read
 [Security model and limits](#security-model-and-limits) before putting it in front of anything real.
@@ -376,27 +376,15 @@ None of those three is in this repository. A remote scorer receives the full tra
 call; see [docs/data-handling.md](docs/data-handling.md). The scorer only reports risk and claims: trust
 and the decision stay in the gateway, and a scorer that fails counts as maximum risk.
 
-## Benchmark
+## Evaluation
 
-The benchmark asks one question: when a caller talks a voice agent into requesting a protected action,
-does the action run? It plays matched pairs of scam and legitimate calls, in English and French, against
-a system under test and reports the attack success rate together with the false refusal rate, since
-either one alone is trivial to drive to zero. The task, the scenarios, the metrics and the limits of the
-current version are in [benchmark/SPEC.md](benchmark/SPEC.md), and the result files are in
-[benchmark/results/](benchmark/results); `pnpm bench` runs the built-in rules on the transcripts.
-
-Held-out set, 20 calls, nothing tuned on it:
-
-| System | Input | Attack success | False refusals | Median decision time |
-|---|---|---|---|---|
-| This gateway, built-in rules | transcript or audio | 2/10 | 3/10 | about 1 ms |
-| LLM judge, claude-haiku-4-5 | transcript | 0/10 | 1/10 | 1152 ms |
-| LLM judge, claude-sonnet-5-5 | transcript | 0/10 | 0/10 | 3101 ms |
-| This gateway with the hosted LLM scorer | transcript | 0/10 | 1/10 to 2/10 | tens of ms when pre-scored |
-
-The built-in keyword rules are weaker than an LLM judge on hard calls, and far faster. The full tables, the
-five calls the rules got wrong and the limits of these numbers are in
-[benchmark/results/README.md](benchmark/results/README.md).
+We do not ask you to trust a benchmark we wrote. The gateway's own test set (40 paired scam and legitimate
+calls, text and phone audio, with every result table) lives in a separate repository,
+[anticlus-eval](https://github.com/Anticlus/anticlus-eval), and is described there as what it is: a
+development set, written and tuned on by the gateway's authors. For an independent view, run the gateway
+inside a third-party agent-security benchmark (the MCP proxy or the `GuardClient` interface is the hook)
+or a published scam-call benchmark; the hosted scorer's repository keeps the survey of which ones exist and
+what they measure.
 
 ## Security model and limits
 
@@ -445,7 +433,6 @@ What it does not do, in this version:
 - [docs/policies.md](docs/policies.md): policies, trust levels, the decision order
 - [docs/data-handling.md](docs/data-handling.md): what is stored, what leaves the machine (draft)
 - [examples/README.md](examples/README.md): the runnable examples
-- [benchmark/SPEC.md](benchmark/SPEC.md): the benchmark
 
 ## Why the name
 
