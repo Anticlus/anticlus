@@ -31,6 +31,26 @@ export interface DecideInput {
   counterparty: Counterparty | null;
   /** A verification for that counterparty failed in this conversation. */
   verificationFailed: boolean;
+  /**
+   * Every signal came from content a tool returned, none from the caller: a
+   * document or page carried an injection. The caller's own request is then
+   * not what is suspect, so the risk does not escalate the conversation; the
+   * injected values are refused, and any change needs the verification.
+   */
+  contentOnly?: boolean;
+}
+
+/** The same value as a person reads it on a screen: letters and digits only, case ignored. */
+const fold = (v: string) => v.toLowerCase().replace(/[^a-z0-9@.]/g, '');
+
+/** Whether the parameter the claim touches carries the claim's value (an injected IBAN, address, path). */
+function carries(params: Readonly<Record<string, string>>, touches: string, value: string): boolean {
+  const given = params[touches];
+  if (given === undefined) return false;
+  const a = fold(given);
+  const b = fold(value);
+  if (!b) return true;
+  return a === b || (b.length >= 6 && a.includes(b)) || (a.length >= 6 && b.includes(a));
 }
 
 export interface DecideOutput {
@@ -54,8 +74,9 @@ function out(
 
 /**
  * The policy gate, pure. The order is the point:
- *  1. risk at or above the action's limit: escalate;
- *  2. a contradicted claim on a parameter of this action, a contradicted
+ *  1. risk at or above the action's limit: escalate (unless every signal came
+ *     from content a tool returned: then the caller is not the suspect);
+ *  2. a contradicted claim whose value this action carries, a contradicted
  *     counterparty on a change, or a failed verification: deny (BEFORE the
  *     trust check, so a contradicted caller is refused, not asked to verify);
  *  3. trust below what the action needs: verify first, through the official
@@ -66,7 +87,7 @@ function out(
 export function decide(input: DecideInput): DecideOutput {
   const { policy, trust, score, counterparty } = input;
 
-  if (score.risk >= policy.riskLimit) {
+  if (score.risk >= policy.riskLimit && !input.contentOnly) {
     return out(
       'escalate',
       RULES.riskOverLimit,
@@ -85,11 +106,17 @@ export function decide(input: DecideInput): DecideOutput {
       ["I can't make this change on this call.", 'A colleague on our finance team can look at it with you.'],
       "I can't make this change on this call. I can pass you to a colleague on our finance team who can look into it."
     );
-  if (touched.some((c) => c.status === 'contradicted')) return denial(RULES.claimContradicted);
+  // A contradicted claim refuses the action. When the contradiction comes from injected content, only
+  // the action that carries the injected value is refused: the user's own transfer to another account is not.
+  const refused = (c: (typeof touched)[number]) =>
+    c.status === 'contradicted' && (!input.contentOnly || carries(input.params, c.touches!, c.value));
+  if (touched.some(refused)) return denial(RULES.claimContradicted);
   if (policy.tier >= 2 && score.counterparty.contradicted) return denial(RULES.counterpartyContradicted);
   if (policy.tier >= 2 && input.verificationFailed) return denial(RULES.verificationFailed);
 
-  if (TRUST_RANK[trust] < TRUST_RANK[policy.requiredTrust]) {
+  // Under an injection in the content, no change goes through on identification alone.
+  const requiredTrust = input.contentOnly && policy.tier >= 2 ? 'verified' : policy.requiredTrust;
+  if (TRUST_RANK[trust] < TRUST_RANK[requiredTrust]) {
     if (counterparty) {
       return out(
         'verify_first',

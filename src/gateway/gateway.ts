@@ -207,11 +207,16 @@ export function createGateway(options: GatewayOptions): Gateway {
         await store.setCounterparty(req.conversationId, counterparty.id);
       }
 
+      // Signals that all point at tool content (a file, a page) mean the injection is in the content, not the caller.
+      const contentOnly =
+        result.signals.length > 0 &&
+        result.signals.every((s) => conversation.turns[s.turn]?.role === 'tool');
       const outcome = decide({
         policy,
         trust,
         score: result,
         params: req.params,
+        contentOnly,
         factCheckPending: options.isFactCheckPending?.(req.conversationId) ?? false,
         counterparty,
         verificationFailed: verificationFailed(counterparty, verifications)
