@@ -7,7 +7,7 @@ import type {
   VerificationRequest
 } from '../contract.js';
 
-const TRUST_RANK: Record<TrustLevel, number> = { anonymous: 0, identified: 1, verified: 2 };
+const TRUST_RANK: Record<TrustLevel, number> = { anonymous: 0, identified: 1, authenticated: 2, verified: 3 };
 
 /** The rule ids. They go to the audit trail only, never to the caller. */
 export const RULES = {

@@ -26,7 +26,7 @@ function reference(s: Scenario, score: CallScore): Decision {
   if (trust === 'identified' && s.verifications.some((v) => v.counterpartyId === matched && v.passed)) {
     trust = 'verified';
   }
-  const rank: Record<TrustLevel, number> = { anonymous: 0, identified: 1, verified: 2 };
+  const rank: Record<TrustLevel, number> = { anonymous: 0, identified: 1, authenticated: 2, verified: 3 };
   if (score.risk >= policy.riskLimit) return 'escalate';
   if (
     score.claims.some(

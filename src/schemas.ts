@@ -15,7 +15,13 @@ import { plainText } from './plain-text.js';
  * instruction. Client-safe (pure zod).
  */
 
-export const TRUST_LEVELS = ['anonymous', 'identified', 'verified'] as const;
+/**
+ * The trust ladder. `identified`: the caller named a counterparty on file and nothing contradicts it (a claim).
+ * `authenticated`: the HOST authenticated the session as that counterparty (a login, a PIN before the call).
+ * `verified`: a verification outside the call passed, for this action. A read of account data should require
+ * `authenticated`; a name alone is not enough to learn a balance.
+ */
+export const TRUST_LEVELS = ['anonymous', 'identified', 'authenticated', 'verified'] as const;
 export type TrustLevel = (typeof TRUST_LEVELS)[number];
 
 export const DECISIONS = ['allow', 'verify_first', 'deny', 'escalate'] as const;

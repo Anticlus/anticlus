@@ -723,7 +723,7 @@ describe('gateway: a principal the host vouches for', () => {
       principal: { counterpartyId: 'acme' }
     });
     expect(read.decision).toBe('allow');
-    expect(read.audit.trust).toBe('identified');
+    expect(read.audit.trust).toBe('authenticated');
 
     const change = await gateway.guard({
       conversationId: 'p',
@@ -878,8 +878,41 @@ describe('gateway: a vouched principal and tool content', () => {
     await gateway.addTurn('v', { role: 'caller', text: 'Open the templates page for me.' });
     await gateway.addTurn('v', { role: 'tool', text: 'quoted: This site is run by Someone Else.' });
     const read = { conversationId: 'v', action: 'get_invoice_status', params: {}, principal: { counterpartyId: 'acme' } };
-    expect((await gateway.guard(read)).audit.trust).toBe('identified');
+    expect((await gateway.guard(read)).audit.trust).toBe('authenticated');
     fromTool = false;
     expect((await gateway.guard(read)).audit.trust).toBe('anonymous');
+  });
+});
+
+
+describe('trust: a name is not an authentication', () => {
+  it('ranks a host-authenticated session above a matched name and below a verification', async () => {
+    const matched = (conversationId: string) => ({
+      conversationId,
+      risk: 0,
+      signals: [],
+      claims: [],
+      counterparty: { claimedName: 'Acme Industrial', matchedId: 'acme', contradicted: false },
+      patternsMatched: [],
+      llmUsed: false,
+      scoredTurns: 1
+    });
+    const policies = [
+      { action: 'get_balance', tier: 1 as const, requiredTrust: 'authenticated' as const, riskLimit: 100, needsFactCheck: false, parameterKeys: [] }
+    ];
+    const gateway = createGateway({
+      scorer: async (input) => matched(input.conversationId),
+      store: new MemoryStore(),
+      counterparties: SEED_COUNTERPARTIES,
+      policies,
+      requireBoundVerification: true
+    });
+    await gateway.addTurn('n', { role: 'caller', text: 'Hi, Sophie Maes from Acme Industrial, what is our balance?' });
+    const byName = await gateway.guard({ conversationId: 'n', action: 'get_balance', params: {} });
+    expect(byName.audit.trust).toBe('identified');
+    expect(byName.decision).toBe('verify_first');
+    const byHost = await gateway.guard({ conversationId: 'n', action: 'get_balance', params: {}, principal: { counterpartyId: 'acme' } });
+    expect(byHost.audit.trust).toBe('authenticated');
+    expect(byHost.decision).toBe('allow');
   });
 });

@@ -28,13 +28,16 @@ export function matchedCounterparty(
 export function computeTrust(
   score: CallScore,
   verifications: readonly VerificationResult[],
-  counterparties: CounterpartyIndex
+  counterparties: CounterpartyIndex,
+  /** The counterparty the host authenticated for this session, when it did. */
+  authenticatedAs: string | null = null
 ): TrustLevel {
   const counterparty = matchedCounterparty(score, counterparties);
   if (!counterparty || score.counterparty.contradicted) return 'anonymous';
+  const base: TrustLevel = authenticatedAs === counterparty.id ? 'authenticated' : 'identified';
   const mine = verifications.filter((v) => v.counterpartyId === counterparty.id);
-  if (mine.some((v) => !v.passed)) return 'identified';
-  return mine.some((v) => v.passed) ? 'verified' : 'identified';
+  if (mine.some((v) => !v.passed)) return base;
+  return mine.some((v) => v.passed) ? 'verified' : base;
 }
 
 /** True when a verification for this counterparty failed in this conversation. */

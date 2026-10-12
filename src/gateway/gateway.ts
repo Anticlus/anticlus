@@ -208,7 +208,7 @@ export function createGateway(options: GatewayOptions): Gateway {
         result.counterparty = { claimedName: result.counterparty.claimedName ?? vouched.name, matchedId: vouched.id, contradicted: false };
       }
       const counterparty = matchedCounterparty(result, counterparties);
-      const trust = computeTrust(result, verifications, counterparties);
+      const trust = computeTrust(result, verifications, counterparties, vouched && !callerContradicts ? vouched.id : null);
       if (counterparty && !result.counterparty.contradicted) {
         await store.setCounterparty(req.conversationId, counterparty.id);
       }
