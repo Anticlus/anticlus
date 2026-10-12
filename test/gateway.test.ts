@@ -857,3 +857,29 @@ describe('decide: after a refused verification', () => {
     expect(d.rule).toBe(RULES.verificationFailed);
   });
 });
+
+describe('gateway: a vouched principal and tool content', () => {
+  it('is not contradicted by a page the agent read, only by the caller', async () => {
+    let fromTool = true;
+    const gateway = createGateway({
+      scorer: async (input) => ({
+        conversationId: input.conversationId,
+        risk: 30,
+        signals: [{ id: 'authority', weight: 20, quote: 'quoted', turn: fromTool ? 1 : 0 }],
+        claims: [],
+        counterparty: { claimedName: 'Someone Else', matchedId: null, contradicted: true },
+        patternsMatched: [],
+        llmUsed: true,
+        scoredTurns: input.turns.length
+      }),
+      store: new MemoryStore(),
+      counterparties: SEED_COUNTERPARTIES
+    });
+    await gateway.addTurn('v', { role: 'caller', text: 'Open the templates page for me.' });
+    await gateway.addTurn('v', { role: 'tool', text: 'quoted: This site is run by Someone Else.' });
+    const read = { conversationId: 'v', action: 'get_invoice_status', params: {}, principal: { counterpartyId: 'acme' } };
+    expect((await gateway.guard(read)).audit.trust).toBe('identified');
+    fromTool = false;
+    expect((await gateway.guard(read)).audit.trust).toBe('anonymous');
+  });
+});

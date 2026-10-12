@@ -196,10 +196,16 @@ export function createGateway(options: GatewayOptions): Gateway {
         if (v.action === undefined && v.paramsHash === undefined) return !options.requireBoundVerification;
         return v.action === req.action && v.paramsHash === paramsHash;
       });
-      // A principal the host authenticated stands in for a name the caller gave, unless the scorer contradicts it.
+      // Signals that all point at tool content (a file, a page) mean the injection is in the content, not the caller.
+      const contentOnly =
+        result.signals.length > 0 &&
+        result.signals.every((s) => conversation.turns[s.turn]?.role === 'tool');
+      // A principal the host authenticated stands in for a name the caller gave. Only the caller's own
+      // words can contradict it: a page or a file the agent read says nothing about who is on the line.
       const vouched = req.principal ? (counterparties.get(req.principal.counterpartyId) ?? null) : null;
-      if (vouched && !result.counterparty.matchedId && !result.counterparty.contradicted) {
-        result.counterparty = { claimedName: vouched.name, matchedId: vouched.id, contradicted: false };
+      const callerContradicts = result.counterparty.contradicted && !contentOnly && result.signals.length > 0;
+      if (vouched && !callerContradicts) {
+        result.counterparty = { claimedName: result.counterparty.claimedName ?? vouched.name, matchedId: vouched.id, contradicted: false };
       }
       const counterparty = matchedCounterparty(result, counterparties);
       const trust = computeTrust(result, verifications, counterparties);
@@ -207,10 +213,6 @@ export function createGateway(options: GatewayOptions): Gateway {
         await store.setCounterparty(req.conversationId, counterparty.id);
       }
 
-      // Signals that all point at tool content (a file, a page) mean the injection is in the content, not the caller.
-      const contentOnly =
-        result.signals.length > 0 &&
-        result.signals.every((s) => conversation.turns[s.turn]?.role === 'tool');
       const outcome = decide({
         policy,
         trust,
