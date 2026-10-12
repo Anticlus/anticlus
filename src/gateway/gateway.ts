@@ -203,7 +203,7 @@ export function createGateway(options: GatewayOptions): Gateway {
       // A principal the host authenticated stands in for a name the caller gave. Only the caller's own
       // words can contradict it: a page or a file the agent read says nothing about who is on the line.
       const vouched = req.principal ? (counterparties.get(req.principal.counterpartyId) ?? null) : null;
-      const callerContradicts = result.counterparty.contradicted && !contentOnly && result.signals.length > 0;
+      const callerContradicts = result.counterparty.contradicted && !contentOnly;
       if (vouched && !callerContradicts) {
         result.counterparty = { claimedName: result.counterparty.claimedName ?? vouched.name, matchedId: vouched.id, contradicted: false };
       }
