@@ -112,12 +112,14 @@ export function decide(input: DecideInput): DecideOutput {
     c.status === 'contradicted' && (!input.contentOnly || carries(input.params, c.touches!, c.value));
   if (touched.some(refused)) return denial(RULES.claimContradicted);
   if (policy.tier >= 2 && score.counterparty.contradicted) return denial(RULES.counterpartyContradicted);
-  // One refusal by the contact on file ends the conversation's access to anything that needs
-  // identification: the caller is not who they say, and the contact is not asked again.
-  if (policy.tier >= 1 && input.verificationFailed) return denial(RULES.verificationFailed);
-
   // Under an injection in the content, no change goes through on identification alone.
   const requiredTrust = input.contentOnly && policy.tier >= 2 ? 'verified' : policy.requiredTrust;
+  // One refusal by the contact on file ends the conversation's access to anything that would need
+  // them again: the contact is asked once. What the caller could do without asking stays open.
+  if (input.verificationFailed && TRUST_RANK[trust] < TRUST_RANK[requiredTrust]) {
+    return denial(RULES.verificationFailed);
+  }
+
   if (TRUST_RANK[trust] < TRUST_RANK[requiredTrust]) {
     if (counterparty) {
       return out(

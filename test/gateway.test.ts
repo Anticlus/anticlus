@@ -826,11 +826,11 @@ describe('decide: an injection in tool content', () => {
 });
 
 describe('decide: after a refused verification', () => {
-  it('denies even a read that needs identification, so the contact is not asked again', () => {
+  it('denies what would need the contact again, and leaves open what never needed them', () => {
     const read = {
       action: 'get_invoice_status',
       tier: 1 as const,
-      requiredTrust: 'identified' as const,
+      requiredTrust: 'authenticated' as const,
       riskLimit: 100,
       needsFactCheck: false,
       parameterKeys: []
@@ -855,6 +855,16 @@ describe('decide: after a refused verification', () => {
     });
     expect(d.decision).toBe('deny');
     expect(d.rule).toBe(RULES.verificationFailed);
+    const open = decide({
+      policy: { ...read, requiredTrust: 'identified' },
+      trust: 'identified',
+      score: { conversationId: 'r', risk: 10, signals: [], claims: [], counterparty: { claimedName: 'Acme', matchedId: 'acme', contradicted: false }, patternsMatched: [], llmUsed: false, scoredTurns: 1 },
+      params: {},
+      factCheckPending: false,
+      counterparty: SEED_COUNTERPARTIES[0]!,
+      verificationFailed: true
+    });
+    expect(open.decision).toBe('allow');
   });
 });
 
