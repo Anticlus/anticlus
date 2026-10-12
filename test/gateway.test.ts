@@ -824,3 +824,36 @@ describe('decide: an injection in tool content', () => {
     expect(decide(base({ policy: tier2, params: { street: 'Main 1' } })).decision).toBe('verify_first');
   });
 });
+
+describe('decide: after a refused verification', () => {
+  it('denies even a read that needs identification, so the contact is not asked again', () => {
+    const read = {
+      action: 'get_invoice_status',
+      tier: 1 as const,
+      requiredTrust: 'identified' as const,
+      riskLimit: 100,
+      needsFactCheck: false,
+      parameterKeys: []
+    };
+    const d = decide({
+      policy: read,
+      trust: 'identified',
+      score: {
+        conversationId: 'r',
+        risk: 10,
+        signals: [],
+        claims: [],
+        counterparty: { claimedName: 'Acme', matchedId: 'acme', contradicted: false },
+        patternsMatched: [],
+        llmUsed: false,
+        scoredTurns: 1
+      },
+      params: {},
+      factCheckPending: false,
+      counterparty: SEED_COUNTERPARTIES[0]!,
+      verificationFailed: true
+    });
+    expect(d.decision).toBe('deny');
+    expect(d.rule).toBe(RULES.verificationFailed);
+  });
+});
