@@ -74,8 +74,10 @@ function out(
 
 /**
  * The policy gate, pure. The order is the point:
- *  1. risk at or above the action's limit: escalate (unless every signal came
- *     from content a tool returned: then the caller is not the suspect);
+ *  1. risk at or above the action's limit: escalate; a host-authenticated caller is
+ *     sent to their own device instead, and a request already verified proceeds
+ *     (unless every signal came from content a tool returned: then the caller is
+ *     not the suspect);
  *  2. a contradicted claim whose value this action carries, a contradicted
  *     counterparty on a change, or a failed verification: deny (BEFORE the
  *     trust check, so a contradicted caller is refused, not asked to verify);
@@ -88,12 +90,27 @@ export function decide(input: DecideInput): DecideOutput {
   const { policy, trust, score, counterparty } = input;
 
   if (score.risk >= policy.riskLimit && !input.contentOnly) {
-    return out(
-      'escalate',
-      RULES.riskOverLimit,
-      ['This request needs a colleague to review it.'],
-      "I'm going to pass this to a colleague on our finance team, who will get back to you."
-    );
+    // A risky request from a caller the host itself authenticated goes to that person's own device, not
+    // to a colleague: if it is theirs they confirm it, if their session was taken they refuse it. A caller
+    // who is merely named, or nobody, is escalated. A request already verified for these parameters proceeds.
+    if (TRUST_RANK[trust] >= TRUST_RANK['authenticated'] && counterparty) {
+      if (trust !== 'verified') {
+        return out(
+          'verify_first',
+          RULES.riskOverLimit,
+          ['Requests like this need to be confirmed outside this call.'],
+          `Before I can do that, I'll confirm it with ${counterparty.name} using the contact details we already have on file.`,
+          { kind: 'app', counterpartyId: counterparty.id, target: counterparty.officialPhone }
+        );
+      }
+    } else {
+      return out(
+        'escalate',
+        RULES.riskOverLimit,
+        ['This request needs a colleague to review it.'],
+        "I'm going to pass this to a colleague on our finance team, who will get back to you."
+      );
+    }
   }
 
   const touched = score.claims.filter(

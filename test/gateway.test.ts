@@ -926,3 +926,32 @@ describe('trust: a name is not an authentication', () => {
     expect(byHost.decision).toBe('allow');
   });
 });
+
+describe('decide: a risky request from an authenticated caller', () => {
+  const policy = { action: 'send_money', tier: 3 as const, requiredTrust: 'verified' as const, riskLimit: 70, needsFactCheck: false, parameterKeys: ['recipient', 'amount'] };
+  const risky = (trust: 'identified' | 'authenticated' | 'verified'): DecideInput => ({
+    policy,
+    trust,
+    score: {
+      conversationId: 'a',
+      risk: 85,
+      signals: [{ id: 'urgency', weight: 40, quote: 'today, please', turn: 0 }],
+      claims: [],
+      counterparty: { claimedName: 'Acme', matchedId: 'acme', contradicted: false },
+      patternsMatched: [],
+      llmUsed: true,
+      scoredTurns: 1
+    },
+    params: { recipient: 'BE43068999999501', amount: '98.7' },
+    factCheckPending: false,
+    counterparty: SEED_COUNTERPARTIES[0]!,
+    verificationFailed: false
+  });
+  it('goes to their own device, while a merely named caller is escalated and a verified request proceeds', () => {
+    expect(decide(risky('identified')).decision).toBe('escalate');
+    const own = decide(risky('authenticated'));
+    expect(own.decision).toBe('verify_first');
+    expect(own.verification?.kind).toBe('app');
+    expect(decide(risky('verified')).decision).toBe('allow');
+  });
+});
