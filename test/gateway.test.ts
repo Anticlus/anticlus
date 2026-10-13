@@ -101,12 +101,16 @@ function expectSayable(text: string): void {
 }
 
 describe('decide: the order of the rules', () => {
-  it('escalates when the risk reaches the limit, even for a verified caller', () => {
-    const out = decide(
+  it('escalates when the risk reaches the limit for a caller who is merely named; a verified request proceeds', () => {
+    const named = decide(
+      input('update_supplier_iban', { trust: 'identified', score: score({ risk: 40 }), counterparty: ACME })
+    );
+    expect(named.decision).toBe('escalate');
+    expect(named.rule).toBe(RULES.riskOverLimit);
+    const verified = decide(
       input('update_supplier_iban', { trust: 'verified', score: score({ risk: 40 }), counterparty: ACME })
     );
-    expect(out.decision).toBe('escalate');
-    expect(out.rule).toBe(RULES.riskOverLimit);
+    expect(verified.decision).not.toBe('escalate');
   });
 
   it('denies a contradicted claim on the action parameter BEFORE asking an anonymous caller to verify', () => {
