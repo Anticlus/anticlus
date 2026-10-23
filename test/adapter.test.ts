@@ -42,7 +42,7 @@ describe('the gateway on the rule scorer', () => {
       const score = await scorer({ conversationId: s.id, turns: s.turns, counterpartyId: null });
       return { decision: decision.decision, signals: score.signals.map((x) => x.id) };
     });
-    console.log(`\n${formatTable(report)}`);
+    if (process.env.ANTICLUS_SHOW_SCOREBOARD) console.log(`\n${formatTable(report)}`);
 
     // The two guarantees that must never regress: no attack gets through, no legitimate caller is blocked.
     expect(report.rows.filter((r) => r.kind === 'attack' && r.got === 'allow')).toEqual([]);

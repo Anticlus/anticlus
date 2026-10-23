@@ -379,9 +379,9 @@ and the decision stay in the gateway, and a scorer that fails counts as maximum 
 ## Evaluation
 
 We do not ask you to trust a benchmark we wrote. The gateway's own test set (40 paired scam and legitimate
-calls, text and phone audio, with every result table) lives in a separate repository,
-[anticlus-eval](https://github.com/Anticlus/anticlus-eval), and is described there as what it is: a
-development set, written and tuned on by the gateway's authors. For an independent view, run the gateway
+calls, text and phone audio, with every result table) is kept out of this repository, in `anticlus-eval`,
+which is published separately. It is described there as what it is: a development set, written and tuned
+on by the gateway's authors. For an independent view, run the gateway
 inside a third-party agent-security benchmark (the MCP proxy or the `GuardClient` interface is the hook)
 or a published scam-call benchmark; the hosted scorer's repository keeps the survey of which ones exist and
 what they measure.

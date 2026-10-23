@@ -36,7 +36,7 @@ describe('every scenario through the gateway with its ideal score', () => {
       });
       return { decision: decision.decision, signals: IDEAL_SCORES[s.id]!.signals.map((x) => x.id) };
     });
-    console.log(`\n${formatTable(report)}`);
+    if (process.env.ANTICLUS_SHOW_SCOREBOARD) console.log(`\n${formatTable(report)}`);
     expect(report.rows.filter((r) => !r.pass)).toEqual([]);
   });
 
